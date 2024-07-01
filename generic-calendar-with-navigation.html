@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generic Calendar with Year Navigation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #calendar-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 1200px;
+        }
+        .month {
+            margin: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        table {
+            border-collapse: collapse;
+        }
+        th, td {
+            width: 30px;
+            height: 30px;
+            text-align: center;
+            border: 1px solid #eee;
+        }
+        th {
+            background-color: #f0f0f0;
+        }
+        .week-number {
+            background-color: #e0e0e0;
+            font-weight: bold;
+        }
+        .controls {
+            margin-bottom: 20px;
+        }
+        button {
+            margin: 0 10px;
+            padding: 5px 10px;
+            font-size: 16px;
+        }
+        #current-year {
+            font-size: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <button id="prev-year">Previous Year</button>
+        <span id="current-year"></span>
+        <button id="next-year">Next Year</button>
+    </div>
+    <div id="calendar-container"></div>
+
+    <script>
+        const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+        function isLeapYear(year) {
+            return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+        }
+
+        function getDaysInMonth(month, year) {
+            const daysInMonth = [31, isLeapYear(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+            return daysInMonth[month];
+        }
+
+        function getWeekNumber(date) {
+            const target = new Date(date.valueOf());
+            const dayNr = (date.getDay() + 6) % 7;
+            target.setDate(target.getDate() - dayNr + 3);
+            const firstThursday = target.valueOf();
+            target.setMonth(0, 1);
+            if (target.getDay() !== 4) {
+                target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+            }
+            return 1 + Math.ceil((firstThursday - target) / 604800000);
+        }
+
+        function createCalendar(year) {
+            const calendarContainer = document.getElementById('calendar-container');
+            calendarContainer.innerHTML = '';
+
+            for (let month = 0; month < 12; month++) {
+                const monthDiv = document.createElement('div');
+                monthDiv.className = 'month';
+                monthDiv.innerHTML = `<h3>${months[month]}</h3>`;
+
+                const table = document.createElement('table');
+                const headerRow = table.insertRow();
+                headerRow.innerHTML = '<th>Week</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th>';
+
+                let date = new Date(year, month, 1);
+                let weekNumber = getWeekNumber(date);
+
+                let row = table.insertRow();
+                let weekCell = row.insertCell();
+                weekCell.textContent = weekNumber;
+                weekCell.className = 'week-number';
+                
+                for (let i = 0; i < (date.getDay() + 6) % 7; i++) {
+                    row.insertCell();
+                }
+
+                while (date.getMonth() === month) {
+                    if (date.getDay() === 1 && date.getDate() !== 1) {
+                        row = table.insertRow();
+                        weekCell = row.insertCell();
+                        weekNumber = getWeekNumber(date);
+                        weekCell.textContent = weekNumber;
+                        weekCell.className = 'week-number';
+                    }
+
+                    const day = date.getDate();
+                    const cell = row.insertCell();
+                    cell.textContent = day;
+
+                    date.setDate(date.getDate() + 1);
+                }
+
+                monthDiv.appendChild(table);
+                calendarContainer.appendChild(monthDiv);
+            }
+
+            document.getElementById('current-year').textContent = year;
+        }
+
+        let currentYear = new Date().getFullYear();
+
+        document.getElementById('prev-year').addEventListener('click', () => {
+            currentYear--;
+            createCalendar(currentYear);
+        });
+
+        document.getElementById('next-year').addEventListener('click', () => {
+            currentYear++;
+            createCalendar(currentYear);
+        });
+
+        createCalendar(currentYear);
+    </script>
+</body>
+</html>
