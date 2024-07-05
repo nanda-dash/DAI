@@ -1,0 +1,430 @@
+<html><head><base href="https://websim.ai/" /><title>WebSim Editor - Vertical Short News Posts</title><style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #f0f2f5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+  .editor-container {
+    width: 360px;
+    height: 640px;
+    background-color: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    position: relative;
+  }
+  .editor-content {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  .image-section, .header-section, .body-section {
+    position: absolute;
+    left: 0;
+    right: 0;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+  .image-section {
+    top: 0;
+    height: 40%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+  }
+  .header-section {
+    top: 40%;
+    height: 10%;
+    display: flex;
+    align-items: center;
+  }
+  .body-section {
+    top: 50%;
+    height: 50%;
+  }
+  #uploadedImage {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .header-input, .body-input {
+    width: 100%;
+    border: none;
+    padding: 10px;
+    box-sizing: border-box;
+    font-size: 16px;
+    background-color: transparent;
+  }
+  .header-input {
+    font-size: 24px;
+    font-weight: bold;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .body-input {
+    height: 100%;
+    overflow-y: auto;
+  }
+  .controls {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 20;
+    background-color: white;
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  .format-buttons {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 5px;
+    margin-bottom: 10px;
+  }
+  .format-buttons button {
+    padding: 5px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  [contenteditable=true]:empty:before {
+    content: attr(data-placeholder);
+    color: #888;
+    font-style: italic;
+  }
+  .spacing-control, .size-control, .font-control, .color-control, .margin-control {
+    display: flex;
+    align-items: center;
+    margin-top: 10px;
+  }
+  .spacing-control label, .size-control label, .font-control label, .color-control label, .margin-control label {
+    margin-right: 10px;
+    min-width: 120px;
+  }
+  .upload-text {
+    color: #007bff;
+    font-size: 18px;
+    text-align: center;
+  }
+  #fontSelect {
+    padding: 5px;
+    border-radius: 3px;
+    border: 1px solid #007bff;
+  }
+  input[type="range"] {
+    width: 150px;
+  }
+  .color-picker {
+    width: 30px;
+    height: 30px;
+    border: none;
+    padding: 0;
+    border-radius: 50%;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+  .color-picker input[type="color"] {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 150%;
+    height: 150%;
+    transform: translate(25%, -25%);
+    opacity: 0;
+    cursor: pointer;
+  }
+  .color-icon {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 18px;
+  }
+  .font-color-icon {
+    position: relative;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 18px;
+    font-weight: bold;
+  }
+  .font-color-icon::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background-color: #000;
+  }
+  .swap-icon {
+    width: 30px;
+    height: 30px;
+    background-color: #007bff;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+  }
+  .swap-icon::before {
+    content: '⇅';
+    color: white;
+    font-size: 20px;
+  }
+</style></head><body>
+<div class="editor-container">
+  <div class="editor-content">
+    <div class="image-section" id="imageSection" onclick="document.getElementById('imageUpload').click()">
+      <img id="uploadedImage" src="" alt="Uploaded image will appear here">
+      <input type="file" id="imageUpload" accept="image/*" style="display: none;">
+      <div class="upload-text">Click to Upload Image</div>
+    </div>
+    
+    <div class="header-section" id="headerSection">
+      <div id="headerInput" contenteditable="true" class="header-input" data-placeholder="Enter headline here"></div>
+    </div>
+    
+    <div class="body-section" id="bodySection">
+      <div id="bodyInput" contenteditable="true" class="body-input" data-placeholder="Enter your news content here"></div>
+    </div>
+  </div>
+</div>
+
+<div class="controls">
+  <div class="format-buttons">
+    <button onclick="changeFontSize(1)">A+</button>
+    <button onclick="changeFontSize(-1)">A-</button>
+    <button onclick="formatText('bold')">B</button>
+    <button onclick="formatText('italic')">I</button>
+    <button onclick="formatText('underline')">U</button>
+  </div>
+  <div class="format-buttons">
+    <button onclick="alignText('left')">&#8612;</button>
+    <button onclick="alignText('center')">&#8596;</button>
+    <button onclick="alignText('right')">&#8614;</button>
+    <div class="color-picker">
+      <div class="font-color-icon" id="fontColorIcon">A</div>
+      <input type="color" id="fontColor" onchange="changeFontColor(this.value)">
+    </div>
+    <div class="swap-icon" onclick="swapImageAndBody()"></div>
+  </div>
+  <div class="font-control">
+    <label for="fontSelect">Font:</label>
+    <select id="fontSelect" onchange="changeFont(this.value)">
+      <option value="Arial, sans-serif">Arial</option>
+      <option value="'Times New Roman', serif">Times New Roman</option>
+      <option value="'Courier New', monospace">Courier New</option>
+      <option value="Georgia, serif">Georgia</option>
+      <option value="'Palatino Linotype', 'Book Antiqua', Palatino, serif">Palatino</option>
+      <option value="Verdana, sans-serif">Verdana</option>
+      <option value="'Arial Black', Gadget, sans-serif">Arial Black</option>
+      <option value="Impact, Charcoal, sans-serif">Impact</option>
+    </select>
+  </div>
+  <div class="spacing-control">
+    <label for="letterSpacing">Letter Spacing:</label>
+    <input type="range" id="letterSpacing" min="-2" max="10" step="0.1" value="0" oninput="updateSpacing()">
+  </div>
+  <div class="spacing-control">
+    <label for="lineSpacing">Line Spacing:</label>
+    <input type="range" id="lineSpacing" min="1" max="3" step="0.1" value="1.5" oninput="updateSpacing()">
+  </div>
+  <div class="size-control">
+    <label for="imageSize">Image Size (%):</label>
+    <input type="range" id="imageSize" min="10" max="80" value="40" oninput="updateSizes()">
+  </div>
+  <div class="size-control">
+    <label for="headerSize">Header Size (%):</label>
+    <input type="range" id="headerSize" min="5" max="30" value="10" oninput="updateSizes()">
+  </div>
+  <div class="size-control">
+    <label for="bodySize">Body Size (%):</label>
+    <input type="range" id="bodySize" min="10" max="80" value="50" oninput="updateSizes()">
+  </div>
+  <div class="color-control">
+    <label for="bgColor">Background Color:</label>
+    <div class="color-picker">
+      <div class="color-icon">&#9635;</div>
+      <input type="color" id="bgColor" onchange="changeBackgroundColor(this.value)">
+    </div>
+  </div>
+  <div class="margin-control">
+    <label for="bodyMargin">Body Margin:</label>
+    <input type="range" id="bodyMargin" min="0" max="50" value="10" oninput="updateBodyMargin(this.value)">
+  </div>
+</div>
+
+<script>
+let activeElement = null;
+let isImageOnTop = true;
+
+document.getElementById('imageUpload').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      document.getElementById('uploadedImage').src = event.target.result;
+      document.querySelector('.upload-text').style.display = 'none';
+    }
+    reader.readAsDataURL(file);
+  }
+});
+
+document.getElementById('headerInput').addEventListener('focus', function() {
+  activeElement = this;
+});
+
+document.getElementById('bodyInput').addEventListener('focus', function() {
+  activeElement = this;
+});
+
+function formatText(style) {
+  if (activeElement) {
+    document.execCommand(style, false, null);
+  }
+}
+
+function alignText(alignment) {
+  if (activeElement) {
+    activeElement.style.textAlign = alignment;
+  }
+}
+
+function changeFont(fontFamily) {
+  if (activeElement) {
+    activeElement.style.fontFamily = fontFamily;
+  }
+}
+
+function changeFontColor(color) {
+  if (activeElement) {
+    activeElement.style.color = color;
+  }
+  document.querySelector('.font-color-icon').style.setProperty('--underline-color', color);
+  document.querySelector('.font-color-icon').style.borderBottom = `3px solid ${color}`;
+}
+
+function changeBackgroundColor(color) {
+  if (activeElement) {
+    activeElement.style.backgroundColor = color;
+  }
+}
+
+function updateSpacing() {
+  const letterSpacing = document.getElementById('letterSpacing').value;
+  const lineSpacing = document.getElementById('lineSpacing').value;
+  if (activeElement) {
+    activeElement.style.letterSpacing = letterSpacing + 'px';
+    activeElement.style.lineHeight = lineSpacing;
+  }
+}
+
+function updateSizes() {
+  const imageSize = document.getElementById('imageSize').value;
+  const headerSize = document.getElementById('headerSize').value;
+  const bodySize = document.getElementById('bodySize').value;
+  
+  if (isImageOnTop) {
+    document.getElementById('imageSection').style.top = '0';
+    document.getElementById('imageSection').style.height = `${imageSize}%`;
+    document.getElementById('headerSection').style.top = `${imageSize}%`;
+    document.getElementById('headerSection').style.height = `${headerSize}%`;
+    document.getElementById('bodySection').style.top = `${parseInt(imageSize) + parseInt(headerSize)}%`;
+    document.getElementById('bodySection').style.height = `${bodySize}%`;
+  } else {
+    document.getElementById('bodySection').style.top = '0';
+    document.getElementById('bodySection').style.height = `${bodySize}%`;
+    document.getElementById('headerSection').style.top = `${bodySize}%`;
+    document.getElementById('headerSection').style.height = `${headerSize}%`;
+    document.getElementById('imageSection').style.top = `${parseInt(bodySize) + parseInt(headerSize)}%`;
+    document.getElementById('imageSection').style.height = `${imageSize}%`;
+  }
+}
+
+function changeFontSize(change) {
+  if (activeElement) {
+    const style = window.getComputedStyle(activeElement, null).getPropertyValue('font-size');
+    const fontSize = parseFloat(style);
+    activeElement.style.fontSize = (fontSize + change) + 'px';
+  }
+}
+
+function swapImageAndBody() {
+  isImageOnTop = !isImageOnTop;
+  updateSizes();
+}
+
+function updateBodyMargin(value) {
+  const bodyInput = document.getElementById('bodyInput');
+  const bodySection = document.getElementById('bodySection');
+  bodyInput.style.marginLeft = value + 'px';
+  bodyInput.style.marginRight = value + 'px';
+  bodyInput.style.width = `calc(100% - ${2 * value}px)`;
+  bodySection.style.overflow = 'hidden';
+}
+
+// Placeholder text functionality
+function updatePlaceholder(element) {
+  if (element.textContent.trim() === '') {
+    element.innerHTML = '';
+  }
+}
+
+document.getElementById('headerInput').addEventListener('input', function() {
+  updatePlaceholder(this);
+});
+
+document.getElementById('bodyInput').addEventListener('input', function() {
+  updatePlaceholder(this);
+});
+
+// Initialize placeholder state and spacing
+updatePlaceholder(document.getElementById('headerInput'));
+updatePlaceholder(document.getElementById('bodyInput'));
+updateSizes();
+updateBodyMargin(10);
+
+// Load system fonts
+function loadSystemFonts() {
+  if ('queryLocalFonts' in window) {
+    window.queryLocalFonts().then(fonts => {
+      const fontSelect = document.getElementById('fontSelect');
+      fonts.forEach(font => {
+        const option = document.createElement('option');
+        option.value = font.family;
+        option.textContent = font.family;
+        fontSelect.appendChild(option);
+      });
+    }).catch(err => {
+      console.error('Error loading system fonts:', err);
+    });
+  } else {
+    console.log('System font loading not supported in this browser.');
+  }
+}
+
+// Call this function when the page loads
+loadSystemFonts();
+
+// Set initial background color
+document.querySelector('.editor-container').style.backgroundColor = 'white';
+
+// Set initial font color
+changeFontColor('#000000');
+</script>
+</body></html>
