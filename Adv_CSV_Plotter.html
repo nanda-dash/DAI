@@ -1,0 +1,283 @@
+<html><head><base href="https://websim.ai/plot-csv-advanced/"><title>Advanced CSV Plotter</title><script src="https://cdn.plot.ly/plotly-latest.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script><style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #f0f0f0;
+    }
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background-color: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h1, h2 {
+        color: #333;
+        text-align: center;
+    }
+    textarea {
+        width: 100%;
+        height: 200px;
+        margin-bottom: 20px;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    .options {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        margin-bottom: 20px;
+    }
+    .option {
+        flex: 1;
+        min-width: 200px;
+    }
+    select, button, input[type="file"] {
+        width: 100%;
+        padding: 10px;
+        margin-top: 5px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    button {
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+    button:hover {
+        background-color: #45a049;
+    }
+    #plotDiv {
+        width: 100%;
+        height: 500px;
+    }
+    #csvPreview {
+        width: 100%;
+        overflow-x: auto;
+        margin-top: 20px;
+    }
+    table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+    th, td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+    }
+    th {
+        background-color: #f2f2f2;
+    }
+    .error {
+        color: #d32f2f;
+        background-color: #ffcdd2;
+        padding: 10px;
+        border-radius: 4px;
+        margin-bottom: 10px;
+    }
+</style></head><body><div class="container"><h1>Advanced CSV Plotter</h1><div id="errorMessage" class="error" style="display: none;"></div><div class="options"><div class="option"><label for="csvFile">Upload CSV File:</label><input type="file" id="csvFile" accept=".csv" onchange="handleFileUpload(this)"></div><div class="option"><label for="csvInput">Or Paste CSV Data:</label><textarea id="csvInput" placeholder="Paste your CSV data here (comma or semicolon separated)"></textarea></div></div><h2>CSV Preview</h2><div id="csvPreview"></div><div class="options"><div class="option"><label for="chartType">Chart Type:</label><select id="chartType"><option value="scatter">Scatter Plot</option><option value="line">Line Chart</option><option value="bar">Bar Chart</option><option value="histogram">Histogram</option><option value="box">Box Plot</option></select></div><div class="option"><label for="xAxis">X-Axis:</label><select id="xAxis"></select></div><div class="option"><label for="yAxis">Y-Axis:</label><select id="yAxis"></select></div><div class="option"><label for="groupBy">Group By (optional):</label><select id="groupBy"><option value="">None</option></select></div></div><button onclick="plotData()">Plot Data</button><div id="plotDiv"></div></div><script>
+    let parsedData;
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+    function showError(message) {
+        const errorDiv = document.getElementById('errorMessage');
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+    }
+
+    function hideError() {
+        document.getElementById('errorMessage').style.display = 'none';
+    }
+
+    function handleFileUpload(input) {
+        hideError();
+        const file = input.files[0];
+        if (file) {
+            if (file.size > MAX_FILE_SIZE) {
+                showError(`File size exceeds the maximum limit of ${MAX_FILE_SIZE / 1024 / 1024}MB.`);
+                input.value = ''; // Clear the file input
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('csvInput').value = e.target.result;
+                parseCSV();
+            };
+            reader.onerror = function(e) {
+                showError('Error reading file: ' + e.target.error.name);
+            };
+            reader.readAsText(file);
+        }
+    }
+
+    function parseCSV() {
+        hideError();
+        const csvInput = document.getElementById('csvInput').value;
+        if (!csvInput.trim()) {
+            showError('Please provide CSV data.');
+            return;
+        }
+        
+        // Detect newline character
+        const newlineChar = csvInput.indexOf('\r\n') !== -1 ? '\r\n' : '\n';
+        
+        Papa.parse(csvInput, {
+            delimiter: autoDetectDelimiter(csvInput),
+            header: true,
+            dynamicTyping: true,
+            newline: newlineChar,
+            skipEmptyLines: true,
+            complete: function(results) {
+                if (results.errors.length > 0) {
+                    showError('Error parsing CSV: ' + results.errors[0].message);
+                    return;
+                }
+                if (results.data.length === 0) {
+                    showError('No data found in the CSV.');
+                    return;
+                }
+                parsedData = results.data;
+                updateSelects();
+                displayCSVPreview();
+            },
+            error: function(error) {
+                showError('Error parsing CSV: ' + error.message);
+            }
+        });
+    }
+
+    function autoDetectDelimiter(csvContent) {
+        const firstLine = csvContent.split(/\r?\n/)[0];
+        if (firstLine.includes(';')) {
+            return ';';
+        } else if (firstLine.includes(',')) {
+            return ',';
+        } else if (firstLine.includes('\t')) {
+            return '\t';
+        } else {
+            return ','; // Default to comma if no delimiter is found
+        }
+    }
+
+    function displayCSVPreview() {
+        const previewDiv = document.getElementById('csvPreview');
+        if (parsedData && parsedData.length > 0) {
+            const headers = Object.keys(parsedData[0]);
+            let tableHTML = '<table><tr>';
+            headers.forEach(header => {
+                tableHTML += `<th>${header}</th>`;
+            });
+            tableHTML += '</tr>';
+            
+            parsedData.slice(0, 5).forEach(row => {
+                tableHTML += '<tr>';
+                headers.forEach(header => {
+                    tableHTML += `<td>${row[header]}</td>`;
+                });
+                tableHTML += '</tr>';
+            });
+            tableHTML += '</table>';
+            previewDiv.innerHTML = tableHTML;
+        } else {
+            previewDiv.innerHTML = '<p>No data to preview</p>';
+        }
+    }
+
+    function updateSelects() {
+        if (!parsedData || parsedData.length === 0) return;
+        
+        const columns = Object.keys(parsedData[0]);
+        const selects = ['xAxis', 'yAxis', 'groupBy'];
+        
+        selects.forEach(selectId => {
+            const select = document.getElementById(selectId);
+            select.innerHTML = '';
+            if (selectId === 'groupBy') {
+                select.innerHTML = '<option value="">None</option>';
+            }
+            columns.forEach(column => {
+                const option = document.createElement('option');
+                option.value = column;
+                option.textContent = column;
+                select.appendChild(option);
+            });
+        });
+
+        // Set default X-axis to Timestamp for time series data
+        const xAxisSelect = document.getElementById('xAxis');
+        if (columns.includes('Timestamp')) {
+            xAxisSelect.value = 'Timestamp';
+        }
+    }
+
+    function plotData() {
+        hideError();
+        if (!parsedData || parsedData.length === 0) {
+            showError('Please upload or paste valid CSV data first.');
+            return;
+        }
+
+        const chartType = document.getElementById('chartType').value;
+        const xAxis = document.getElementById('xAxis').value;
+        const yAxis = document.getElementById('yAxis').value;
+        const groupBy = document.getElementById('groupBy').value;
+
+        if (!xAxis || !yAxis) {
+            showError('Please select both X and Y axes.');
+            return;
+        }
+
+        let traces = [];
+
+        try {
+            if (groupBy) {
+                const groups = [...new Set(parsedData.map(row => row[groupBy]))];
+                traces = groups.map(group => {
+                    const filteredData = parsedData.filter(row => row[groupBy] === group);
+                    return {
+                        x: filteredData.map(row => row[xAxis]),
+                        y: filteredData.map(row => row[yAxis]),
+                        type: chartType,
+                        name: group
+                    };
+                });
+            } else {
+                traces = [{
+                    x: parsedData.map(row => row[xAxis]),
+                    y: parsedData.map(row => row[yAxis]),
+                    type: chartType
+                }];
+            }
+
+            const layout = {
+                title: 'CSV Data Plot',
+                xaxis: { title: xAxis },
+                yaxis: { title: yAxis }
+            };
+
+            // For time series data, set the x-axis type to date
+            if (xAxis === 'Timestamp') {
+                layout.xaxis.type = 'date';
+            }
+
+            Plotly.newPlot('plotDiv', traces, layout);
+        } catch (error) {
+            showError('Error plotting data: ' + error.message);
+        }
+    }
+
+    document.getElementById('csvInput').addEventListener('input', parseCSV);
+
+    // Initialize with sample data
+    document.getElementById('csvInput').value = `Timestamp;Current;Voltage;Temperature
+2024-07-04 14:09:12;-2.7;2.58;24.62
+2024-07-04 14:09:12;-0.94;3.04;27.32
+2024-07-04 14:09:12;-3.29;3.59;20.07
+2024-07-04 14:09:12;-2.35;3.91;29.95`;
+    parseCSV();
+</script></body></html>
