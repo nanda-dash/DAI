@@ -1,0 +1,428 @@
+<html><head><title>SoundFont Keyboard</title>
+<style>
+  body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    font-family: 'Arial', sans-serif;
+    background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+  .container {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+  select, button, input {
+    margin: 5px;
+    padding: 10px 15px;
+    font-size: 14px;
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  select:hover, button:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+  }
+  #instrument-select {
+    width: 200px;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url('data:image/svg+xml;utf8,<svg fill="%23ffffff" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>');
+    background-repeat: no-repeat;
+    background-position-x: 95%;
+    background-position-y: 50%;
+  }
+  #instrument-select option {
+    background-color: #2a2a2a;
+    color: #fff;
+  }
+  #current-instrument, #transpose-value {
+    margin-top: 10px;
+    font-style: italic;
+  }
+  .transpose-controls {
+    display: flex;
+    align-items: center;
+    margin-top: 10px;
+  }
+  .transpose-controls button {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    font-size: 18px;
+    line-height: 1;
+  }
+  #transpose-value {
+    margin: 0 10px;
+    width: 40px;
+    text-align: center;
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  #keyboard {
+    display: flex;
+    justify-content: center;
+    background: linear-gradient(to bottom, #4a4a4a, #2a2a2a);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  }
+  .key {
+    width: 40px;
+    height: 150px;
+    background-color: #f0f0f0;
+    border: 1px solid #000;
+    margin: 0 2px;
+    cursor: pointer;
+    border-radius: 0 0 5px 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.1s ease;
+  }
+  .key.black {
+    width: 30px;
+    height: 100px;
+    background-color: #000;
+    margin-left: -15px;
+    margin-right: -15px;
+    z-index: 1;
+  }
+  .key:active, .key.active {
+    background-color: #ddd;
+  }
+  .key.black:active, .key.black.active {
+    background-color: #333;
+  }
+  #loading {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 24px;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 20px;
+    border-radius: 10px;
+    z-index: 20;
+  }
+  #chord-pads {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 600px;
+    margin-top: 20px;
+  }
+  .chord-pad {
+    width: 60px;
+    height: 60px;
+    margin: 5px;
+    font-size: 16px;
+    font-weight: bold;
+    background-color: rgba(255, 255, 255, 0.2);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.1s ease;
+  }
+  .chord-pad:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+  }
+  .chord-pad:active {
+    transform: scale(0.95);
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="controls">
+      <select id="instrument-select">
+        <option value="">Select an instrument...</option>
+      </select>
+      <button id="record">Record</button>
+      <button id="play">Play</button>
+      <button id="stop">Stop</button>
+      <div class="transpose-controls">
+        <button id="transpose-down">-</button>
+        <input type="text" id="transpose-value" value="0" readonly>
+        <button id="transpose-up">+</button>
+      </div>
+    </div>
+    <div id="current-instrument"></div>
+    <div id="keyboard"></div>
+  </div>
+  <div id="chord-pads"></div>
+  <div id="loading">Loading SoundFonts...</div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
+
+  <script>
+    const keys = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const keyMapping = {
+      'z': 'C3', 's': 'C#3', 'x': 'D3', 'd': 'D#3', 'c': 'E3', 'v': 'F3', 'g': 'F#3',
+      'b': 'G3', 'h': 'G#3', 'n': 'A3', 'j': 'A#3', 'm': 'B3',
+      'q': 'C4', '2': 'C#4', 'w': 'D4', '3': 'D#4', 'e': 'E4', 'r': 'F4', '5': 'F#4',
+      't': 'G4', '6': 'G#4', 'y': 'A4', '7': 'A#4', 'u': 'B4',
+      'i': 'C5', '9': 'C#5', 'o': 'D5', '0': 'D#5', 'p': 'E5', '[': 'F5', '=': 'F#5',
+      ']': 'G5'
+    };
+    const octaves = 3;
+    let currentInstrument = 'acoustic_grand_piano';
+    let soundFont;
+    let recording = false;
+    let recordedNotes = [];
+    let startTime;
+    let playbackTimeouts = [];
+    let transposeValue = 0;
+
+    const pressedKeys = new Set();
+
+    const chords = {
+      'E': ['E4', 'G#4', 'B4'],
+      'A': ['A3', 'C#4', 'E4'],
+      'F': ['F3', 'A3', 'C4'],
+      'D': ['D4', 'F#4', 'A4'],
+      'G': ['G3', 'B3', 'D4'],
+      'C': ['C4', 'E4', 'G4'],
+      'B': ['B3', 'D#4', 'F#4'],
+      'Em': ['E4', 'G4', 'B4'],
+      'Am': ['A3', 'C4', 'E4'],
+      'Dm': ['D4', 'F4', 'A4'],
+      'Bm': ['B3', 'D4', 'F#4'],
+      'Cm': ['C4', 'D#4', 'G4'],
+      'Fm': ['F3', 'G#3', 'C4'],
+      'E7': ['E4', 'G#4', 'B4', 'D5'],
+      'A7': ['A3', 'C#4', 'E4', 'G4'],
+      'D7': ['D4', 'F#4', 'A4', 'C5'],
+      'G7': ['G3', 'B3', 'D4', 'F4'],
+      'C7': ['C4', 'E4', 'G4', 'A#4']
+    };
+
+    function createKeyboard() {
+      const keyboard = document.getElementById('keyboard');
+      for (let octave = 3; octave < 3 + octaves; octave++) {
+        keys.forEach((note) => {
+          const key = document.createElement('div');
+          key.className = `key ${note.includes('#') ? 'black' : 'white'}`;
+          key.dataset.note = `${note}${octave}`;
+          key.addEventListener('mousedown', () => playNote(`${note}${octave}`));
+          key.addEventListener('mouseup', () => releaseNote(`${note}${octave}`));
+          key.addEventListener('mouseleave', () => releaseNote(`${note}${octave}`));
+          keyboard.appendChild(key);
+        });
+      }
+    }
+
+    function createChordPads() {
+      const chordPads = document.getElementById('chord-pads');
+      Object.keys(chords).forEach(chordName => {
+        const pad = document.createElement('button');
+        pad.className = 'chord-pad';
+        pad.textContent = chordName;
+        pad.addEventListener('mousedown', () => playChord(chordName));
+        pad.addEventListener('mouseup', () => releaseChord(chordName));
+        pad.addEventListener('mouseleave', () => releaseChord(chordName));
+        chordPads.appendChild(pad);
+      });
+    }
+
+    createKeyboard();
+    createChordPads();
+
+    async function loadSoundFonts() {
+      const response = await fetch('https://gleitz.github.io/midi-js-soundfonts/MusyngKite/names.json');
+      const instruments = await response.json();
+      const select = document.getElementById('instrument-select');
+      instruments.forEach(instrument => {
+        const option = document.createElement('option');
+        option.value = instrument;
+        option.textContent = instrument.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        select.appendChild(option);
+      });
+      loadSoundFont('acoustic_grand_piano');
+    }
+
+    async function loadSoundFont(instrument) {
+      document.getElementById('loading').style.display = 'block';
+      currentInstrument = instrument;
+      const response = await fetch(`https://gleitz.github.io/midi-js-soundfonts/MusyngKite/${instrument}-mp3.js`);
+      const soundFontData = await response.text();
+      eval(soundFontData);
+      soundFont = MIDI.Soundfont[instrument];
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('current-instrument').textContent = `Current Instrument: ${instrument.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`;
+    }
+
+    function transposeNote(note) {
+      const [noteName, octave] = [note.slice(0, -1), parseInt(note.slice(-1))];
+      let noteIndex = keys.indexOf(noteName);
+      noteIndex += transposeValue;
+
+      let newOctave = octave + Math.floor(noteIndex / 12);
+      noteIndex = (noteIndex + 12) % 12; // Ensure positive index
+
+      return `${keys[noteIndex]}${newOctave}`;
+    }
+
+    function playNote(note) {
+      if (!soundFont) return;
+      
+      const transposedNote = transposeNote(note);
+      let sound = new Howl({
+        src: [soundFont[transposedNote]],
+        format: ['mp3']
+      });
+      
+      sound.play();
+      
+      if (recording) {
+        const time = Date.now() - startTime;
+        recordedNotes.push({ note, time });
+      }
+
+      // Highlight the key
+      const key = document.querySelector(`.key[data-note="${note}"]`);
+      if (key) {
+        key.classList.add('active');
+      }
+    }
+
+    function releaseNote(note) {
+      // Remove highlight from the key
+      const key = document.querySelector(`.key[data-note="${note}"]`);
+      if (key) {
+        key.classList.remove('active');
+      }
+    }
+
+    function playChord(chordName) {
+      if (!soundFont) return;
+      
+      chords[chordName].forEach(note => {
+        playNote(note);
+      });
+
+      if (recording) {
+        const time = Date.now() - startTime;
+        recordedNotes.push({ chord: chordName, time });
+      }
+    }
+
+    function releaseChord(chordName) {
+      chords[chordName].forEach(note => {
+        releaseNote(note);
+      });
+    }
+
+    function startRecording() {
+      recording = true;
+      recordedNotes = [];
+      startTime = Date.now();
+      document.getElementById('record').textContent = 'Stop Recording';
+    }
+
+    function stopRecording() {
+      recording = false;
+      document.getElementById('record').textContent = 'Record';
+    }
+
+    function playRecording() {
+      if (recordedNotes.length === 0) return;
+      stopPlayback(); // Stop any ongoing playback
+      const playbackStartTime = Date.now();
+      recordedNotes.forEach(({ note, chord, time }) => {
+        const timeout = setTimeout(() => {
+          if (note) {
+            playNote(note);
+            setTimeout(() => releaseNote(note), 200);
+          } else if (chord) {
+            playChord(chord);
+            setTimeout(() => releaseChord(chord), 200);
+          }
+        }, time);
+        playbackTimeouts.push(timeout);
+      });
+    }
+
+    function stopPlayback() {
+      // Clear all scheduled playback timeouts
+      playbackTimeouts.forEach(timeout => clearTimeout(timeout));
+      playbackTimeouts = [];
+""
+      
+      // Stop all currently playing sounds
+      Howler.stop();
+      
+      // Reset all key colors
+      document.querySelectorAll('.key').forEach(key => {
+        key.classList.remove('active');
+      });
+    }
+
+    function updateTransposeDisplay() {
+      const transposeInput = document.getElementById('transpose-value');
+      transposeInput.value = transposeValue >= 0 ? `+${transposeValue}` : transposeValue;
+    }
+
+    loadSoundFonts();
+
+    document.getElementById('instrument-select').addEventListener('change', (e) => loadSoundFont(e.target.value));
+    document.getElementById('record').addEventListener('click', () => {
+      if (recording) {
+        stopRecording();
+      } else {
+        startRecording();
+      }
+    });
+    document.getElementById('play').addEventListener('click', playRecording);
+    document.getElementById('stop').addEventListener('click', stopPlayback);
+
+    document.getElementById('transpose-down').addEventListener('click', () => {
+      transposeValue = Math.max(transposeValue - 1, -12);
+      updateTransposeDisplay();
+    });
+
+    document.getElementById('transpose-up').addEventListener('click', () => {
+      transposeValue = Math.min(transposeValue + 1, 12);
+      updateTransposeDisplay();
+    });
+
+    window.addEventListener('keydown', (e) => {
+      const note = keyMapping[e.key.toLowerCase()];
+      if (note && !pressedKeys.has(note)) {
+        pressedKeys.add(note);
+        playNote(note);
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      const note = keyMapping[e.key.toLowerCase()];
+      if (note) {
+        pressedKeys.delete(note);
+        releaseNote(note);
+      }
+    });
+
+    // Initialize transpose display
+    updateTransposeDisplay();
+  </script>
+</body></html>
