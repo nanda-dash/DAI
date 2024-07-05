@@ -1,0 +1,214 @@
+<html><head><base href="https://Chess.com"><title>Chess.com - Classic Large Board</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #f0f0f0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+  }
+  #app {
+    display: flex;
+    gap: 20px;
+  }
+  .chessboard {
+    width: 640px;
+    height: 640px;
+    background: #769656;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    border: 5px solid #4a4a4a;
+  }
+  .square {
+    width: 80px;
+    height: 80px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 64px;
+    cursor: pointer;
+  }
+  .light {
+    background: #eeeed2;
+  }
+  .dark {
+    background: #769656;
+  }
+  .selected {
+    background: #baca44;
+  }
+  .possible-move {
+    background: #f7f769;
+  }
+  .controls {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  button {
+    padding: 10px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  .status {
+    margin-top: 20px;
+    font-size: 18px;
+  }
+  .white-piece {
+    color: #ffffff;
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+  }
+  .black-piece {
+    color: #000000;
+    text-shadow: -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div>
+    <div class="chessboard">
+      <div v-for="(square, index) in board" 
+           :key="index" 
+           :class="['square', square.color, { selected: square.selected, 'possible-move': square.possibleMove }]"
+           @click="selectSquare(square)">
+        <span :class="{'white-piece': square.isWhite, 'black-piece': !square.isWhite}">{{ square.piece }}</span>
+      </div>
+    </div>
+    <div class="status">
+      <strong>Status:</strong> {{ status }}
+    </div>
+  </div>
+  <div class="controls">
+    <button @click="newGame">New Game</button>
+    <button @click="undoMove">Undo Move</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<script>
+new Vue({
+  el: '#app',
+  data: {
+    chess: null,
+    board: [],
+    selectedSquare: null,
+    currentPlayer: 'w',
+    status: 'White to move',
+  },
+  methods: {
+    initializeBoard() {
+      this.chess = new Chess();
+      this.updateBoard();
+    },
+    updateBoard() {
+      this.board = [];
+      const positions = this.chess.board();
+      for (let i = 0; i < 8; i++) {
+        for (let j = 0; j < 8; j++) {
+          const piece = positions[i][j];
+          this.board.push({
+            index: i * 8 + j,
+            piece: piece ? this.mapPieceToUnicode(piece) : '',
+            color: (i + j) % 2 === 0 ? 'light' : 'dark',
+            selected: false,
+            possibleMove: false,
+            isWhite: piece ? piece.color === 'w' : null
+          });
+        }
+      }
+      this.currentPlayer = this.chess.turn();
+      this.updateStatus();
+    },
+    mapPieceToUnicode(piece) {
+      const pieceMap = {
+        'p': '♟', 'r': '♜', 'n': '♞', 'b': '♝', 'q': '♛', 'k': '♚',
+        'P': '♙', 'R': '♖', 'N': '♘', 'B': '♗', 'Q': '♕', 'K': '♔'
+      };
+      return pieceMap[piece.type] || '';
+    },
+    selectSquare(square) {
+      if (this.selectedSquare) {
+        const move = this.chess.move({
+          from: this.algebraic(this.selectedSquare.index),
+          to: this.algebraic(square.index),
+          promotion: 'q'
+        });
+
+        if (move) {
+          this.updateBoard();
+          this.clearHighlights();
+        } else {
+          this.clearHighlights();
+          if (square.piece) {
+            square.selected = true;
+            this.selectedSquare = square;
+            this.showPossibleMoves(square);
+          }
+        }
+      } else if (square.piece) {
+        square.selected = true;
+        this.selectedSquare = square;
+        this.showPossibleMoves(square);
+      }
+    },
+    clearHighlights() {
+      this.board.forEach(square => {
+        square.selected = false;
+        square.possibleMove = false;
+      });
+      this.selectedSquare = null;
+    },
+    showPossibleMoves(square) {
+      const moves = this.chess.moves({
+        square: this.algebraic(square.index),
+        verbose: true
+      });
+      moves.forEach(move => {
+        const index = this.index(move.to);
+        this.board[index].possibleMove = true;
+      });
+    },
+    algebraic(index) {
+      const file = String.fromCharCode('a'.charCodeAt(0) + (index % 8));
+      const rank = 8 - Math.floor(index / 8);
+      return file + rank;
+    },
+    index(algebraic) {
+      const file = algebraic.charCodeAt(0) - 'a'.charCodeAt(0);
+      const rank = 8 - parseInt(algebraic[1]);
+      return rank * 8 + file;
+    },
+    newGame() {
+      this.initializeBoard();
+    },
+    undoMove() {
+      this.chess.undo();
+      this.updateBoard();
+    },
+    updateStatus() {
+      let status = '';
+      const turn = this.chess.turn() === 'w' ? 'White' : 'Black';
+
+      if (this.chess.in_checkmate()) {
+        status = `Checkmate! ${turn} loses.`;
+      } else if (this.chess.in_draw()) {
+        status = 'Draw!';
+      } else if (this.chess.in_check()) {
+        status = `${turn} is in check!`;
+      } else {
+        status = `${turn} to move`;
+      }
+
+      this.status = status;
+    },
+  },
+  created() {
+    this.initializeBoard();
+  }
+});
+</script>
+</body></html>
