@@ -1,0 +1,409 @@
+<html><head>
+<title>Advanced Text Canvas Creator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: #f0f0f0;
+  }
+  .container {
+    display: flex;
+    flex-wrap: wrap;
+    max-width: 1200px;
+    margin: 0 auto;
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  }
+  h1 {
+    color: #333;
+    text-align: center;
+    width: 100%;
+  }
+  .control-panel {
+    flex: 1;
+    min-width: 300px;
+    margin-right: 20px;
+  }
+  .canvas-panel {
+    flex: 2;
+    min-width: 300px;
+  }
+  .input-group {
+    margin-bottom: 20px;
+  }
+  label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+  }
+  select, input[type="number"], input[type="range"], input[type="text"], textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+  }
+  #formatToolbar {
+    margin-bottom: 10px;
+    display: flex;
+    flex-wrap: wrap;
+  }
+  #formatToolbar button, #formatToolbar select, #formatToolbar input[type="color"] {
+    margin-right: 5px;
+    margin-bottom: 5px;
+    padding: 5px 10px;
+    background-color: #f0f0f0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  #canvas {
+    border: 1px solid #ddd;
+  }
+  .action-button {
+    display: inline-block;
+    width: calc(50% - 5px);
+    padding: 10px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    margin-top: 10px;
+  }
+  #updateTextButton {
+    margin-right: 10px;
+    background-color: #2196F3;
+  }
+  .action-button:hover {
+    opacity: 0.9;
+  }
+  .icon-button {
+    font-size: 18px;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    line-height: 30px;
+    text-align: center;
+  }
+  #gradientControls {
+    display: none;
+  }
+  @media (max-width: 768px) {
+    .container {
+      flex-direction: column;
+    }
+    .control-panel, .canvas-panel {
+      width: 100%;
+      margin-right: 0;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Advanced Text Canvas Creator</h1>
+  
+  <div class="control-panel">
+    <div class="input-group">
+      <label for="aspectRatio">Aspect Ratio:</label>
+      <select id="aspectRatio">
+        <option value="16:9">16:9</option>
+        <option value="9:16">9:16</option>
+        <option value="1:1">Square (1:1)</option>
+        <option value="custom">Custom</option>
+      </select>
+    </div>
+    
+    <div id="customRatio" style="display:none;">
+      <div class="input-group">
+        <label for="widthInput">Width:</label>
+        <input type="number" id="widthInput" min="1" value="800">
+      </div>
+      <div class="input-group">
+        <label for="heightInput">Height:</label>
+        <input type="number" id="heightInput" min="1" value="600">
+      </div>
+    </div>
+    
+    <div class="input-group">
+      <label for="backgroundType">Background Type:</label>
+      <select id="backgroundType">
+        <option value="transparent">Transparent</option>
+        <option value="solid">Solid Color</option>
+        <option value="gradient">Gradient</option>
+      </select>
+    </div>
+    
+    <div id="solidColorControl" style="display:none;">
+      <label for="solidColorPicker">Solid Color:</label>
+      <input type="color" id="solidColorPicker" value="#ffffff">
+    </div>
+    
+    <div id="gradientControls" style="display:none;">
+      <label for="gradientColor1">Gradient Color 1:</label>
+      <input type="color" id="gradientColor1" value="#ffffff">
+      <label for="gradientColor2">Gradient Color 2:</label>
+      <input type="color" id="gradientColor2" value="#000000">
+    </div>
+    
+    <div class="input-group">
+      <label for="textInput">Enter Text:</label>
+      <textarea id="textInput" rows="3">Enter your text here</textarea>
+    </div>
+    
+    <div class="input-group">
+      <label>Text Formatting:</label>
+      <div id="formatToolbar">
+        <button class="icon-button" onclick="formatText('bold')"><i class="fas fa-bold"></i></button>
+        <button class="icon-button" onclick="formatText('italic')"><i class="fas fa-italic"></i></button>
+        <button class="icon-button" onclick="formatText('underline')"><i class="fas fa-underline"></i></button>
+        <input type="color" id="colorPicker" onchange="changeColor(this.value)">
+        <select id="fontSelect" onchange="changeFont(this.value)">
+          <option value="Arial">Arial</option>
+          <option value="Verdana">Verdana</option>
+          <option value="Times New Roman">Times New Roman</option>
+          <option value="Courier">Courier</option>
+          <option value="system-ui">System Font</option>
+        </select>
+        <button class="icon-button" onclick="changeTextAlign('left')"><i class="fas fa-align-left"></i></button>
+        <button class="icon-button" onclick="changeTextAlign('center')"><i class="fas fa-align-center"></i></button>
+        <button class="icon-button" onclick="changeTextAlign('right')"><i class="fas fa-align-right"></i></button>
+      </div>
+    </div>
+    
+    <div class="input-group">
+      <label for="fontSize">Font Size: <span id="fontSizeValue">24px</span></label>
+      <input type="range" id="fontSize" min="8" max="72" value="24" step="1">
+    </div>
+    
+    <div class="input-group">
+      <label for="textWidth">Text Width: <span id="textWidthValue">760px</span></label>
+      <input type="range" id="textWidth" min="100" max="1000" value="760" step="10">
+    </div>
+    
+    <div class="input-group">
+      <label for="lineSpacing">Line Spacing: <span id="lineSpacingValue">1</span></label>
+      <input type="range" id="lineSpacing" min="0.5" max="3" value="1" step="0.1">
+    </div>
+    
+    <button id="updateTextButton" class="action-button" onclick="updateCanvasText()">Update Canvas</button>
+    <button id="saveButton" class="action-button" onclick="savePNG()">Save as PNG</button>
+  </div>
+  
+  <div class="canvas-panel">
+    <canvas id="canvas"></canvas>
+  </div>
+</div>
+
+<script>
+let canvas;
+let quoteText;
+
+function initCanvas() {
+  canvas = new fabric.Canvas('canvas');
+  canvas.setDimensions({width: 800, height: 600});
+  updateBackground();
+}
+
+function updateCanvasSize() {
+  let width, height;
+  if (aspectRatioSelect.value === 'custom') {
+    width = parseInt(widthInput.value);
+    height = parseInt(heightInput.value);
+  } else {
+    const [w, h] = aspectRatioSelect.value.split(':').map(Number);
+    width = 800;
+    height = (800 * h) / w;
+  }
+  canvas.setDimensions({width: width, height: height});
+  updateBackground();
+  updateCanvasText();
+}
+
+const aspectRatioSelect = document.getElementById('aspectRatio');
+const customRatioDiv = document.getElementById('customRatio');
+const widthInput = document.getElementById('widthInput');
+const heightInput = document.getElementById('heightInput');
+const backgroundTypeSelect = document.getElementById('backgroundType');
+const solidColorControl = document.getElementById('solidColorControl');
+const gradientControls = document.getElementById('gradientControls');
+const textWidthInput = document.getElementById('textWidth');
+const textWidthValue = document.getElementById('textWidthValue');
+const lineSpacingInput = document.getElementById('lineSpacing');
+const lineSpacingValue = document.getElementById('lineSpacingValue');
+const fontSizeInput = document.getElementById('fontSize');
+const fontSizeValue = document.getElementById('fontSizeValue');
+const fontSelect = document.getElementById('fontSelect');
+
+aspectRatioSelect.addEventListener('change', function() {
+  customRatioDiv.style.display = this.value === 'custom' ? 'block' : 'none';
+  updateCanvasSize();
+});
+
+widthInput.addEventListener('input', updateCanvasSize);
+heightInput.addEventListener('input', updateCanvasSize);
+
+backgroundTypeSelect.addEventListener('change', function() {
+  solidColorControl.style.display = this.value === 'solid' ? 'block' : 'none';
+  gradientControls.style.display = this.value === 'gradient' ? 'block' : 'none';
+  updateBackground();
+});
+
+textWidthInput.addEventListener('input', function() {
+  textWidthValue.textContent = this.value + 'px';
+  updateCanvasText();
+});
+
+lineSpacingInput.addEventListener('input', function() {
+  lineSpacingValue.textContent = this.value;
+  updateCanvasText();
+});
+
+fontSizeInput.addEventListener('input', function() {
+  fontSizeValue.textContent = this.value + 'px';
+  updateCanvasText();
+});
+
+function updateBackground() {
+  const backgroundType = backgroundTypeSelect.value;
+  
+  if (backgroundType === 'transparent') {
+    canvas.backgroundColor = null;
+    canvas.renderAll();
+  } else if (backgroundType === 'solid') {
+    const solidColor = document.getElementById('solidColorPicker').value;
+    canvas.backgroundColor = solidColor;
+    canvas.renderAll();
+  } else if (backgroundType === 'gradient') {
+    const gradientColor1 = document.getElementById('gradientColor1').value;
+    const gradientColor2 = document.getElementById('gradientColor2').value;
+    const gradient = new fabric.Gradient({
+      type: 'linear',
+      coords: {
+        x1: 0,
+        y1: 0,
+        x2: canvas.width,
+        y2: canvas.height,
+      },
+      colorStops: [
+        { offset: 0, color: gradientColor1 },
+        { offset: 1, color: gradientColor2 }
+      ]
+    });
+    canvas.backgroundColor = gradient;
+    canvas.renderAll();
+  }
+}
+
+document.getElementById('solidColorPicker').addEventListener('input', updateBackground);
+document.getElementById('gradientColor1').addEventListener('input', updateBackground);
+document.getElementById('gradientColor2').addEventListener('input', updateBackground);
+
+function updateCanvasText() {
+    const text = document.getElementById('textInput').value;
+    if (quoteText) {
+        canvas.remove(quoteText);
+    }
+
+    quoteText = new fabric.Textbox(text, {
+        width: parseInt(textWidthInput.value),
+        top: 20,
+        left: (canvas.width - parseInt(textWidthInput.value)) / 2,
+        fontSize: parseInt(fontSizeInput.value),
+        fontFamily: fontSelect.value,
+        fill: document.getElementById('colorPicker').value,
+        textAlign: 'center',
+        editable: true,
+        lineHeight: parseFloat(lineSpacingInput.value)
+    });
+
+    canvas.add(quoteText);
+    canvas.renderAll();
+}
+
+function formatText(style) {
+    if (!quoteText) return;
+    
+    switch(style) {
+        case 'bold':
+            quoteText.set('fontWeight', quoteText.fontWeight === 'bold' ? 'normal' : 'bold');
+            break;
+        case 'italic':
+            quoteText.set('fontStyle', quoteText.fontStyle === 'italic' ? 'normal' : 'italic');
+            break;
+        case 'underline':
+            quoteText.set('underline', !quoteText.underline);
+            break;
+    }
+    canvas.renderAll();
+}
+
+function changeColor(color) {
+    if (quoteText) {
+        quoteText.set('fill', color);
+        canvas.renderAll();
+    }
+}
+
+function changeFont(font) {
+    if (quoteText) {
+        quoteText.set('fontFamily', font);
+        canvas.renderAll();
+    }
+}
+
+function changeTextAlign(align) {
+    if (quoteText) {
+        quoteText.set('textAlign', align);
+        canvas.renderAll();
+    }
+}
+
+function savePNG() {
+    const dataURL = canvas.toDataURL({
+        format: 'png',
+        quality: 1
+    });
+    const link = document.createElement('a');
+    link.download = 'websim_canvas_text.png';
+    link.href = dataURL;
+    link.click();
+}
+
+document.getElementById('textInput').addEventListener('input', updateCanvasText);
+
+// Function to get system fonts
+function getSystemFonts() {
+    const fonts = [
+        'Arial', 'Arial Black', 'Bahnschrift', 'Calibri','Odia Archana', 'Odia Kalinga',
+        'Odia Banita', 'Odia Neeraj', 'Odia prabhakar', 'Odia Visu', 'Odia_OT_Jagannatha'
+    ];
+    return fonts;
+}
+
+// Function to populate font select
+function populateFontSelect() {
+    const systemFonts = getSystemFonts();
+    systemFonts.forEach(font => {
+        const option = document.createElement('option');
+        option.value = font;
+        option.textContent = font;
+        option.style.fontFamily = font;
+        fontSelect.appendChild(option);
+    });
+}
+
+window.onload = function() {
+    initCanvas();
+    populateFontSelect();
+    updateCanvasText();
+};
+</script>
+</body></html>
