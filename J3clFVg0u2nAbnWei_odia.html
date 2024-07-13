@@ -1,0 +1,609 @@
+<html><head><base href="https://sharechat.com/"/><title>SharePicsCompose</title><style>
+body, html {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: Arial, sans-serif;
+  background-color: #f0f0f0;
+}
+
+.app-container {
+  display: flex;
+  height: 100%;
+}
+
+.canvas-container {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #333;
+  overflow: auto;
+  position: relative;
+}
+
+#textCanvas {
+  border: 1px solid #fff;
+  transition: transform 0.3s ease;
+}
+
+.controls {
+  width: 300px;
+  padding: 20px;
+  background-color: #fff;
+  box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+  overflow-y: auto;
+}
+
+textarea, input, button, select {
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 5px;
+}
+
+button {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 10px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #45a049;
+}
+
+.control-group {
+  margin-bottom: 15px;
+}
+
+.control-group label {
+  display: block;
+  margin-bottom: 5px;
+}
+
+#imageInput {
+  display: none;
+}
+
+.color-input {
+  display: flex;
+  align-items: center;
+}
+
+.color-input input[type="color"] {
+  width: 50px;
+  margin-right: 10px;
+}
+
+.slider-container {
+  display: flex;
+  align-items: center;
+}
+
+.slider-container input[type="range"] {
+  flex-grow: 1;
+  margin-right: 10px;
+}
+
+.slider-container input[type="number"] {
+  width: 50px;
+}
+
+.zoom-controls {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  gap: 10px;
+}
+
+.zoom-btn {
+  font-size: 18px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.7);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.zoom-btn:hover {
+  background-color: rgba(255, 255, 255, 0.9);
+}
+</style></head><body>
+<div class="app-container">
+  <div class="canvas-container" id="canvasContainer">
+    <canvas id="textCanvas" width="1080" height="1920"></canvas>
+    <div class="zoom-controls">
+      <button class="zoom-btn" onclick="zoomIn()">+</button>
+      <button class="zoom-btn" onclick="zoomOut()">-</button>
+      <button class="zoom-btn" onclick="resetZoom()">↺</button>
+    </div>
+  </div>
+  <div class="controls">
+    <h2>SharePicsCompose</h2>
+    <div class="control-group">
+      <label for="textInput">Enter your text:</label>
+      <textarea id="textInput" rows="4" placeholder="Enter your text here"></textarea>
+    </div>
+    <div class="control-group">
+      <label for="fontSize">Font Size:</label>
+      <div class="slider-container">
+        <input type="range" id="fontSizeSlider" min="10" max="200" value="60">
+        <input type="number" id="fontSize" value="60" min="10" max="200">
+      </div>
+    </div>
+    <div class="control-group">
+      <label for="fontFamily">Font Type:</label>
+      <select id="fontFamily">
+        <option value="Arial, sans-serif">Arial</option>
+        <option value="Odia Visu, sans-serif">Odia Visu</option>
+        <option value = "Odia Banita, sans-serif">Odia Banita</option>
+        <option value = "Odia Archana, sans-serif">Odia Archana</option>
+		    <option value = "Odia Prabhakar, sans-serif">Odia Prabhakar</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label for="lineSpacing">Line Spacing:</label>
+      <div class="slider-container">
+        <input type="range" id="lineSpacing" min="1" max="3" step="0.1" value="1.2">
+        <input type="number" id="lineSpacingValue" min="1" max="3" step="0.1" value="1.2">
+      </div>
+    </div>
+    <div class="control-group">
+      <label for="letterSpacing">Letter Spacing:</label>
+      <div class="slider-container">
+        <input type="range" id="letterSpacing" min="-5" max="20" step="1" value="0">
+        <input type="number" id="letterSpacingValue" min="-5" max="20" step="1" value="0">
+      </div>
+    </div>
+    <div class="control-group">
+      <label for="textAlign">Text Alignment:</label>
+      <select id="textAlign">
+        <option value="left">Left</option>
+        <option value="center">Center</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label for="verticalAlign">Vertical Alignment:</label>
+      <select id="verticalAlign">
+        <option value="top">Top</option>
+        <option value="middle">Middle</option>
+        <option value="bottom">Bottom</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label for="textEffect">Text Effect:</label>
+      <select id="textEffect">
+        <option value="none">None</option>
+        <option value="glow">Glow</option>
+        <option value="shadow">Shadow</option>
+        <option value="neon">Neon</option>
+        <option value="bold">Bold</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label for="textColorMode">Text Color Mode:</label>
+      <select id="textColorMode">
+        <option value="random">Random</option>
+        <option value="custom">Custom</option>
+      </select>
+    </div>
+    <div class="control-group" id="customColorControl" style="display: none;">
+      <label for="textColor">Custom Text Color:</label>
+      <input type="color" id="textColor" value="#ffffff">
+    </div>
+    <div class="control-group">
+      <label for="backgroundType">Background Type:</label>
+      <select id="backgroundType" onchange="toggleBackgroundControls()">
+        <option value="transparent">Transparent</option>
+        <option value="solid">Solid Color</option>
+        <option value="gradient">Gradient Color</option>
+        <option value="image">Image</option>
+      </select>
+    </div>
+    <div id="solidColorControl" class="control-group" style="display: none;">
+      <label for="solidColor">Solid Color:</label>
+      <div class="color-input">
+        <input type="color" id="solidColor" value="#1a1a1a">
+        <input type="text" id="solidColorText" value="#1a1a1a">
+      </div>
+    </div>
+    <div id="gradientColorControl" class="control-group" style="display: none;">
+      <label for="gradientColor1">Gradient Color 1:</label>
+      <div class="color-input">
+        <input type="color" id="gradientColor1" value="#1a1a1a">
+        <input type="text" id="gradientColor1Text" value="#1a1a1a">
+      </div>
+      <label for="gradientColor2">Gradient Color 2:</label>
+      <div class="color-input">
+        <input type="color" id="gradientColor2" value="#4a4a4a">
+        <input type="text" id="gradientColor2Text" value="#4a4a4a">
+      </div>
+    </div>
+    <div id="imageControl" class="control-group" style="display: none;">
+      <label for="imageInput">Select Image:</label>
+      <input type="file" id="imageInput" accept="image/*">
+      <button onclick="document.getElementById('imageInput').click()">Choose Image</button>
+      <label for="imagePosition">Image Position:</label>
+      <select id="imagePosition">
+        <option value="fill">Fill</option>
+        <option value="fit">Fit</option>
+        <option value="topHalf">Top Half</option>
+        <option value="bottomHalf">Bottom Half</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <button onclick="updateCanvas()">Update Canvas</button>
+    </div>
+    <div class="control-group">
+      <button onclick="downloadImage()">Download Image</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('textCanvas');
+const ctx = canvas.getContext('2d');
+const canvasContainer = document.getElementById('canvasContainer');
+const textInput = document.getElementById('textInput');
+const fontSizeInput = document.getElementById('fontSize');
+const fontSizeSlider = document.getElementById('fontSizeSlider');
+const fontFamilySelect = document.getElementById('fontFamily');
+const lineSpacingInput = document.getElementById('lineSpacing');
+const lineSpacingValueInput = document.getElementById('lineSpacingValue');
+const letterSpacingInput = document.getElementById('letterSpacing');
+const letterSpacingValueInput = document.getElementById('letterSpacingValue');
+const textAlignSelect = document.getElementById('textAlign');
+const verticalAlignSelect = document.getElementById('verticalAlign');
+const textEffectSelect = document.getElementById('textEffect');
+const textColorModeSelect = document.getElementById('textColorMode');
+const textColorInput = document.getElementById('textColor');
+const backgroundTypeSelect = document.getElementById('backgroundType');
+const solidColorInput = document.getElementById('solidColor');
+const solidColorTextInput = document.getElementById('solidColorText');
+const gradientColor1Input = document.getElementById('gradientColor1');
+const gradientColor1TextInput = document.getElementById('gradientColor1Text');
+const gradientColor2Input = document.getElementById('gradientColor2');
+const gradientColor2TextInput = document.getElementById('gradientColor2Text');
+const imageInput = document.getElementById('imageInput');
+const imagePositionSelect = document.getElementById('imagePosition');
+
+let backgroundImage = null;
+let zoomLevel = 1;
+
+function getRandomColor() {
+  const letters = '0123456789ABCDEF';
+  let color = '#';
+  for (let i = 0; i < 6; i++) {
+    color += letters[Math.floor(Math.random() * 16)];
+  }
+  return color;
+}
+
+function drawBackground() {
+  const backgroundType = backgroundTypeSelect.value;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  switch(backgroundType) {
+    case 'transparent':
+      // Do nothing, canvas is already clear
+      break;
+    case 'solid':
+      ctx.fillStyle = solidColorInput.value;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      break;
+    case 'gradient':
+      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      gradient.addColorStop(0, gradientColor1Input.value);
+      gradient.addColorStop(1, gradientColor2Input.value);
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      break;
+    case 'image':
+      if (backgroundImage) {
+        const position = imagePositionSelect.value;
+        switch(position) {
+          case 'fill':
+            ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
+            break;
+          case 'fit':
+            const scale = Math.min(canvas.width / backgroundImage.width, canvas.height / backgroundImage.height);
+            const x = (canvas.width - backgroundImage.width * scale) / 2;
+            const y = (canvas.height - backgroundImage.height * scale) / 2;
+            ctx.drawImage(backgroundImage, x, y, backgroundImage.width * scale, backgroundImage.height * scale);
+            break;
+          case 'topHalf':
+            ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height / 2, 0, 0, canvas.width, canvas.height / 2);
+            break;
+          case 'bottomHalf':
+            ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height / 2, 0, canvas.height / 2, canvas.width, canvas.height / 2);
+            break;
+        }
+      }
+      break;
+  }
+}
+
+function wrapText(text, x, maxWidth, lineHeight) {
+  const words = text.split(' ');
+  let line = '';
+  let lines = [];
+
+  for(let n = 0; n < words.length; n++) {
+    const testLine = line + words[n] + ' ';
+    const metrics = ctx.measureText(testLine);
+    const testWidth = metrics.width;
+    if (testWidth > maxWidth && n > 0) {
+      lines.push(line);
+      line = words[n] + ' ';
+    }
+    else {
+      line = testLine;
+    }
+  }
+  lines.push(line);
+  return lines;
+}
+
+function applyTextEffect(text, x, y, color) {
+  const effect = textEffectSelect.value;
+
+  switch(effect) {
+    case 'glow':
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = color;
+      ctx.fillStyle = color;
+      ctx.fillText(text, x, y);
+      ctx.shadowBlur = 0;
+      break;
+    case 'shadow':
+      ctx.shadowOffsetX = 3;
+      ctx.shadowOffsetY = 3;
+      ctx.shadowBlur = 4;
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+      ctx.fillStyle = color;
+      ctx.fillText(text, x, y);
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 0;
+      ctx.shadowBlur = 0;
+      break;
+    case 'neon':
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = color;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 3;
+      ctx.strokeText(text, x, y);
+      ctx.lineWidth = 1;
+      ctx.fillStyle = '#fff';
+      ctx.fillText(text, x, y);
+      ctx.shadowBlur = 0;
+      break;
+    case 'bold':
+      ctx.font = ctx.font.replace(/\d+px/, (parseInt(ctx.font.match(/\d+px/)[0]) + 2) + 'px');
+      ctx.fillStyle = color;
+      ctx.fillText(text, x, y);
+      ctx.font = ctx.font.replace(/\d+px/, (parseInt(ctx.font.match(/\d+px/)[0]) - 2) + 'px');
+      break;
+    default:
+      ctx.fillStyle = color;
+      ctx.fillText(text, x, y);
+  }
+}
+
+function updateCanvas() {
+  drawBackground();
+
+  const text = textInput.value;
+  const fontSize = parseInt(fontSizeInput.value);
+  const fontFamily = fontFamilySelect.value;
+  const lineSpacing = parseFloat(lineSpacingInput.value);
+  const letterSpacing = parseInt(letterSpacingInput.value);
+  const textAlign = textAlignSelect.value;
+  const verticalAlign = verticalAlignSelect.value;
+  const textColorMode = textColorModeSelect.value;
+  
+  ctx.font = `${fontSize}px ${fontFamily}`;
+  ctx.textAlign = textAlign;
+  ctx.textBaseline = 'top';
+  
+  const maxWidth = canvas.width * 0.9;
+  const lineHeight = fontSize * lineSpacing;
+  
+  let x = textAlign === 'left' ? canvas.width * 0.05 : canvas.width / 2;
+  let lines = [];
+  
+  text.split('\n').forEach(paragraph => {
+    lines = lines.concat(wrapText(paragraph, x, maxWidth, lineHeight));
+    lines.push(''); // Add empty line between paragraphs
+  });
+  
+  let y;
+  switch(verticalAlign) {
+    case 'top':
+      y = canvas.height * 0.05;
+      break;
+    case 'middle':
+      y = (canvas.height - lines.length * lineHeight) / 2;
+      break;
+    case 'bottom':
+      y = canvas.height - lines.length * lineHeight - canvas.height * 0.05;
+      break;
+  }
+  
+  lines.forEach(line => {
+    const words = line.split(' ');
+    let currentX = x;
+    words.forEach(word => {
+      const color = textColorMode === 'random' ? getRandomColor() : textColorInput.value;
+      applyTextEffect(word, currentX, y, color);
+      const wordWidth = ctx.measureText(word + ' ').width;
+      currentX += wordWidth + letterSpacing;
+    });
+    y += lineHeight;
+  });
+}
+
+function downloadImage() {
+  const link = document.createElement('a');
+  link.download = 'sharepicscompose-image.png';
+  link.href = canvas.toDataURL();
+  link.click();
+}
+
+function toggleBackgroundControls() {
+  const backgroundType = backgroundTypeSelect.value;
+  document.getElementById('solidColorControl').style.display = backgroundType === 'solid' ? 'block' : 'none';
+  document.getElementById('gradientColorControl').style.display = backgroundType === 'gradient' ? 'block' : 'none';
+  document.getElementById('imageControl').style.display = backgroundType === 'image' ? 'block' : 'none';
+}
+
+function zoomIn() {
+  zoomLevel *= 1.2;
+  updateZoom();
+}
+
+function zoomOut() {
+  zoomLevel /= 1.2;
+  updateZoom();
+}
+
+function resetZoom() {
+  zoomLevel = 1;
+  updateZoom();
+}
+
+function updateZoom() {
+  canvas.style.transform = `scale(${zoomLevel})`;
+}
+
+solidColorInput.addEventListener('input', function() {
+  solidColorTextInput.value = this.value;
+});
+
+solidColorTextInput.addEventListener('input', function() {
+  solidColorInput.value = this.value;
+});
+
+gradientColor1Input.addEventListener('input', function() {
+  gradientColor1TextInput.value = this.value;
+});
+
+gradientColor1TextInput.addEventListener('input', function() {
+  gradientColor1Input.value = this.value;
+});
+
+gradientColor2Input.addEventListener('input', function() {
+  gradientColor2TextInput.value = this.value;
+});
+
+gradientColor2TextInput.addEventListener('input', function() {
+  gradientColor2Input.value = this.value;
+});
+
+imageInput.addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      backgroundImage = new Image();
+      backgroundImage.onload = updateCanvas;
+      backgroundImage.src = event.target.result;
+    }
+    reader.readAsDataURL(file);
+  }
+});
+
+lineSpacingInput.addEventListener('input', function() {
+  lineSpacingValueInput.value = this.value;
+  updateCanvas();
+});
+
+lineSpacingValueInput.addEventListener('input', function() {
+  lineSpacingInput.value = this.value;
+  updateCanvas();
+});
+
+letterSpacingInput.addEventListener('input', function() {
+  letterSpacingValueInput.value = this.value;
+  updateCanvas();
+});
+
+letterSpacingValueInput.addEventListener('input', function() {
+  letterSpacingInput.value = this.value;
+  updateCanvas();
+});
+
+textColorModeSelect.addEventListener('change', function() {
+  document.getElementById('customColorControl').style.display = this.value === 'custom' ? 'block' : 'none';
+  updateCanvas();
+});
+
+fontSizeSlider.addEventListener('input', function() {
+  fontSizeInput.value = this.value;
+  updateCanvas();
+});
+
+fontSizeInput.addEventListener('input', function() {
+  fontSizeSlider.value = this.value;
+  updateCanvas();
+});
+
+// Add event listeners for real-time updates
+textInput.addEventListener('input', updateCanvas);
+fontFamilySelect.addEventListener('change', updateCanvas);
+textAlignSelect.addEventListener('change', updateCanvas);
+verticalAlignSelect.addEventListener('change', updateCanvas);
+textEffectSelect.addEventListener('change', updateCanvas);
+textColorInput.addEventListener('input', updateCanvas);
+backgroundTypeSelect.addEventListener('change', updateCanvas);
+solidColorInput.addEventListener('input', updateCanvas);
+gradientColor1Input.addEventListener('input', updateCanvas);
+gradientColor2Input.addEventListener('input', updateCanvas);
+imagePositionSelect.addEventListener('change', updateCanvas);
+
+// Add zoom functionality using mouse wheel
+canvasContainer.addEventListener('wheel', function(e) {
+  e.preventDefault();
+  if (e.deltaY < 0) {
+    zoomIn();
+  } else {
+    zoomOut();
+  }
+});
+
+// Add pan functionality
+let isPanning = false;
+let startX, startY;
+
+canvasContainer.addEventListener('mousedown', function(e) {
+  isPanning = true;
+  startX = e.clientX - canvasContainer.offsetLeft;
+  startY = e.clientY - canvasContainer.offsetTop;
+});
+
+canvasContainer.addEventListener('mousemove', function(e) {
+  if (!isPanning) return;
+  const x = e.clientX - canvasContainer.offsetLeft;
+  const y = e.clientY - canvasContainer.offsetTop;
+  canvasContainer.scrollLeft += startX - x;
+  canvasContainer.scrollTop += startY - y;
+  startX = x;
+  startY = y;
+});
+
+canvasContainer.addEventListener('mouseup', function() {
+  isPanning = false;
+});
+
+canvasContainer.addEventListener('mouseleave', function() {
+  isPanning = false;
+});
+
+updateCanvas();
+</script></body></html>
