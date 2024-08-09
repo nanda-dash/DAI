@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Stock Market Simulator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .chart-container {
+            flex: 1 1 100%;
+        }
+        .controls {
+            flex: 1 1 300px;
+        }
+        .parameter {
+            margin-bottom: 10px;
+        }
+        label {
+            display: inline-block;
+            width: 150px;
+        }
+        .metrics {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Enhanced Stock Market Simulator</h1>
+    <div class="container">
+        <div class="chart-container">
+            <canvas id="stockChart"></canvas>
+        </div>
+        <div class="controls">
+            <div class="parameter">
+                <label for="initialPrice">Initial Price ($):</label>
+                <input type="number" id="initialPrice" value="100" min="1" max="1000">
+            </div>
+            <div class="parameter">
+                <label for="volatility">Volatility (%):</label>
+                <input type="number" id="volatility" value="2" min="0" max="10" step="0.1">
+            </div>
+            <div class="parameter">
+                <label for="trend">Trend (%):</label>
+                <input type="number" id="trend" value="0" min="-5" max="5" step="0.1">
+            </div>
+            <div class="parameter">
+                <label for="tradingVolume">Trading Volume:</label>
+                <input type="number" id="tradingVolume" value="1000000" min="100000" max="10000000" step="100000">
+            </div>
+            <div class="parameter">
+                <label for="marketSentiment">Market Sentiment:</label>
+                <select id="marketSentiment">
+                    <option value="neutral">Neutral</option>
+                    <option value="bullish">Bullish</option>
+                    <option value="bearish">Bearish</option>
+                </select>
+            </div>
+            <div class="parameter">
+                <label for="eps">EPS ($):</label>
+                <input type="number" id="eps" value="5" min="0" max="100" step="0.1">
+            </div>
+            <div class="parameter">
+                <label for="bookValue">Book Value ($):</label>
+                <input type="number" id="bookValue" value="50" min="1" max="1000">
+            </div>
+            <div class="parameter">
+                <label for="roe">ROE (%):</label>
+                <input type="number" id="roe" value="15" min="0" max="100" step="0.1">
+            </div>
+            <div class="parameter">
+                <label for="faceValue">Face Value ($):</label>
+                <input type="number" id="faceValue" value="10" min="1" max="100">
+            </div>
+            <button id="simulateBtn">Simulate</button>
+        </div>
+    </div>
+    <div class="metrics">
+        <h2>Key Metrics</h2>
+        <p>P/E Ratio: <span id="peRatio"></span></p>
+        <p>P/B Ratio: <span id="pbRatio"></span></p>
+        <p>EPS: <span id="epsValue"></span></p>
+        <p>ROE: <span id="roeValue"></span></p>
+        <p>Face Value: <span id="faceValueMetric"></span></p>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('stockChart').getContext('2d');
+        let stockChart;
+
+        function simulateStockPrice(days, initialPrice, volatility, trend, tradingVolume, marketSentiment, eps, bookValue, roe, faceValue) {
+            let prices = [initialPrice];
+            let volumes = [tradingVolume];
+
+            for (let i = 1; i < days; i++) {
+                let sentimentFactor = 1;
+                if (marketSentiment === 'bullish') sentimentFactor = 1.2;
+                if (marketSentiment === 'bearish') sentimentFactor = 0.8;
+
+                let dailyReturn = (Math.random() - 0.5) * volatility / 100 * sentimentFactor;
+                dailyReturn += trend / 100 / 252;  // Annualized trend to daily
+
+                // Incorporate fundamental metrics into price calculation
+                let fundamentalFactor = (eps / initialPrice + roe / 100) / 2;
+                dailyReturn += fundamentalFactor * 0.001;  // Small daily impact
+
+                let newPrice = prices[i - 1] * (1 + dailyReturn);
+                prices.push(Math.max(newPrice, 0.01));  // Ensure price doesn't go negative
+
+                let volumeChange = (Math.random() - 0.5) * 0.2;  // 20% max volume change
+                volumes.push(Math.max(volumes[i - 1] * (1 + volumeChange), 100000));
+            }
+
+            return { prices, volumes };
+        }
+
+        function updateChart(prices, volumes) {
+            const labels = Array.from({length: prices.length}, (_, i) => `Day ${i + 1}`);
+
+            if (stockChart) {
+                stockChart.destroy();
+            }
+
+            stockChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Stock Price',
+                        data: prices,
+                        borderColor: 'rgb(75, 192, 192)',
+                        tension: 0.1,
+                        yAxisID: 'y'
+                    }, {
+                        label: 'Trading Volume',
+                        data: volumes,
+                        borderColor: 'rgb(255, 99, 132)',
+                        tension: 0.1,
+                        yAxisID: 'y1'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: {
+                                display: true,
+                                text: 'Price ($)'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: {
+                                display: true,
+                                text: 'Volume'
+                            },
+                            grid: {
+                                drawOnChartArea: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateMetrics(price, eps, bookValue, roe, faceValue) {
+            document.getElementById('peRatio').textContent = (price / eps).toFixed(2);
+            document.getElementById('pbRatio').textContent = (price / bookValue).toFixed(2);
+            document.getElementById('epsValue').textContent = eps.toFixed(2);
+            document.getElementById('roeValue').textContent = roe.toFixed(2) + '%';
+            document.getElementById('faceValueMetric').textContent = faceValue.toFixed(2);
+        }
+
+        document.getElementById('simulateBtn').addEventListener('click', () => {
+            const initialPrice = parseFloat(document.getElementById('initialPrice').value);
+            const volatility = parseFloat(document.getElementById('volatility').value);
+            const trend = parseFloat(document.getElementById('trend').value);
+            const tradingVolume = parseInt(document.getElementById('tradingVolume').value);
+            const marketSentiment = document.getElementById('marketSentiment').value;
+            const eps = parseFloat(document.getElementById('eps').value);
+            const bookValue = parseFloat(document.getElementById('bookValue').value);
+            const roe = parseFloat(document.getElementById('roe').value);
+            const faceValue = parseFloat(document.getElementById('faceValue').value);
+
+            const { prices, volumes } = simulateStockPrice(30, initialPrice, volatility, trend, tradingVolume, marketSentiment, eps, bookValue, roe, faceValue);
+            updateChart(prices, volumes);
+            updateMetrics(prices[prices.length - 1], eps, bookValue, roe, faceValue);
+        });
+
+        // Initial simulation
+        const initialPrice = 100;
+        const eps = 5;
+        const bookValue = 50;
+        const roe = 15;
+        const faceValue = 10;
+        const { prices, volumes } = simulateStockPrice(30, initialPrice, 2, 0, 1000000, 'neutral', eps, bookValue, roe, faceValue);
+        updateChart(prices, volumes);
+        updateMetrics(prices[prices.length - 1], eps, bookValue, roe, faceValue);
+    </script>
+</body>
+</html>
