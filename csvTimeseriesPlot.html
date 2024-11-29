@@ -1,0 +1,383 @@
+<html><head><base href="." target="_blank">
+<meta charset="UTF-8">
+<title>CSV Time Series Visualizer</title>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+    :root {
+        --bg-main: #f0f2f5;
+        --bg-container: white;
+        --bg-section: #f8f9fa;
+        --text-color: #333;
+        --border-color: #ddd;
+    }
+
+    [data-theme="dark"] {
+        --bg-main: #1a1a1a;
+        --bg-container: #2d2d2d;
+        --bg-section: #3d3d3d;
+        --text-color: #ffffff;
+        --border-color: #4d4d4d;
+    }
+
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: var(--bg-main);
+        color: var(--text-color);
+        transition: all 0.3s ease;
+    }
+
+    .layout-container {
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        gap: 20px;
+        max-width: 1800px;
+        margin: 0 auto;
+    }
+
+    .sidebar {
+        background: var(--bg-container);
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: width 0.3s ease;
+        overflow: hidden;
+    }
+
+    .sidebar.collapsed {
+        width: 50px;
+    }
+
+    .main-content {
+        background: var(--bg-container);
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .config-section {
+        padding: 15px;
+        background: var(--bg-section);
+        border-radius: 6px;
+        margin-bottom: 20px;
+    }
+
+    select, input {
+        width: 100%;
+        padding: 8px;
+        margin: 5px 0;
+        border: 1px solid var(--border-color);
+        border-radius: 4px;
+        background: var(--bg-container);
+        color: var(--text-color);
+    }
+
+    .plot-container {
+        min-height: 700px;
+    }
+
+    button {
+        background: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-bottom: 10px;
+    }
+
+    button:hover {
+        background: #0056b3;
+    }
+
+    .theme-toggle {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1000;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    #dropZone {
+        border: 2px dashed var(--border-color);
+        padding: 20px;
+        text-align: center;
+        background: var(--bg-section);
+        border-radius: 6px;
+        margin-bottom: 20px;
+    }
+
+    #dropZone.dragover {
+        background: #e3f2fd;
+        border-color: #2196F3;
+    }
+
+    .collapse-toggle {
+        cursor: pointer;
+        background: transparent;
+        border: none;
+        color: var(--text-color);
+        font-size: 20px;
+        transition: transform 0.3s ease;
+    }
+
+    .collapse-toggle.collapsed {
+        transform: rotate(180deg);
+    }
+</style>
+</head>
+<body>
+<button class="theme-toggle" onclick="toggleTheme()">
+    <i class="fas fa-sun"></i>
+</button>
+
+<div class="layout-container">
+    <div class="sidebar" id="sidebar">
+        <button class="collapse-toggle" id="collapseToggle" onclick="toggleSidebar()">
+            <i class="fas fa-angle-left"></i>
+        </button>
+        <h1>Data Visualizer</h1>
+        
+        <div id="dropZone">
+            Drop your CSV/Excel file here or click to select
+            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" style="display: none">
+        </div>
+
+        <div class="config-section">
+            <h3>X-Axis Configuration</h3>
+            <select id="xAxisSelect"></select>
+            <input type="text" id="xAxisLabel" placeholder="Custom X-Axis Label">
+        </div>
+
+        <div class="config-section">
+            <h3>Y-Axis Configuration</h3>
+            <select id="yAxisSelect" multiple>
+                <option value="">Select columns...</option>
+            </select>
+            <input type="text" id="yAxisLabel" placeholder="Custom Y-Axis Label">
+        </div>
+
+        <div class="config-section">
+            <h3>Secondary Y-Axis</h3>
+            <select id="y2AxisSelect" multiple>
+                <option value="">Select columns...</option>
+            </select>
+            <input type="text" id="y2AxisLabel" placeholder="Custom Y-Axis Label">
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div id="plotContainer" class="plot-container"></div>
+    </div>
+</div>
+
+<script>
+let csvData = null;
+let headers = [];
+
+function toggleTheme() {
+    const body = document.body;
+    const themeButton = document.querySelector('.theme-toggle i');
+    const currentTheme = body.getAttribute('data-theme');
+    if (currentTheme === 'dark') {
+        body.removeAttribute('data-theme');
+        themeButton.className = 'fas fa-sun';
+        updatePlotTheme('light');
+    } else {
+        body.setAttribute('data-theme', 'dark');
+        themeButton.className = 'fas fa-moon';
+        updatePlotTheme('dark');
+    }
+}
+
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const collapseToggle = document.getElementById('collapseToggle');
+    sidebar.classList.toggle('collapsed');
+    collapseToggle.classList.toggle('collapsed');
+}
+
+function updatePlotTheme(theme) {
+    if (!csvData) return;
+    const layout = getCurrentLayout();
+    layout.paper_bgcolor = theme === 'dark' ? '#2d2d2d' : 'white';
+    layout.plot_bgcolor = theme === 'dark' ? '#2d2d2d' : 'white';
+    layout.font = { color: theme === 'dark' ? 'white' : 'black' };
+    Plotly.react('plotContainer', getCurrentTraces(), layout, getCurrentConfig());
+}
+
+function getCurrentLayout() {
+    const theme = document.body.getAttribute('data-theme');
+    const xAxisLabel = document.getElementById('xAxisLabel').value || 'X-Axis';
+    const yAxisLabel = document.getElementById('yAxisLabel').value || 'Primary Y-Axis';
+    const y2AxisLabel = document.getElementById('y2AxisLabel').value || 'Secondary Y-Axis';
+    const xAxis = document.getElementById('xAxisSelect').value;
+    return {
+        showlegend: true,
+        xaxis: { title: xAxisLabel, color: theme === 'dark' ? 'white' : 'black' },
+        yaxis: { title: yAxisLabel, color: theme === 'dark' ? 'white' : 'black' },
+        yaxis2: {
+            title: y2AxisLabel,
+            overlaying: 'y',
+            side: 'right',
+            color: theme === 'dark' ? 'white' : 'black'
+        },
+        hovermode: 'closest',
+        legend: {
+            x: 1.1,
+            y: 1,
+            font: { color: theme === 'dark' ? 'white' : 'black' }
+        },
+        paper_bgcolor: theme === 'dark' ? '#2d2d2d' : 'white',
+        plot_bgcolor: theme === 'dark' ? '#2d2d2d' : 'white',
+        font: { color: theme === 'dark' ? 'white' : 'black' }
+    };
+}
+
+function getCurrentConfig() {
+    return {
+        responsive: true,
+        scrollZoom: true,
+        modeBarButtonsToAdd: ['drawline', 'drawopenpath', 'drawclosedpath', 'drawcircle', 'drawrect', 'eraseshape']
+    };
+}
+
+function getCurrentTraces() {
+    if (!csvData) return [];
+    const xAxis = document.getElementById('xAxisSelect').value;
+    const yAxis = Array.from(document.getElementById('yAxisSelect').selectedOptions).map(opt => opt.value);
+    const y2Axis = Array.from(document.getElementById('y2AxisSelect').selectedOptions).map(opt => opt.value);
+
+    const traces = [];
+
+    yAxis.forEach(column => {
+        traces.push({
+            x: csvData.map(row => row[xAxis]),
+            y: csvData.map(row => row[column]),
+            name: column,
+            type: 'scatter',
+            yaxis: 'y'
+        });
+    });
+
+    y2Axis.forEach(column => {
+        traces.push({
+            x: csvData.map(row => row[xAxis]),
+            y: csvData.map(row => row[column]),
+            name: column,
+            type: 'scatter',
+            yaxis: 'y2'
+        });
+    });
+
+    return traces;
+}
+
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+});
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', handleFileDrop);
+fileInput.addEventListener('change', handleFileSelect);
+
+function handleFileDrop(e) {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) processFile(file);
+}
+
+function handleFileSelect(e) {
+    const file = e.target.files[0];
+    if (file) processFile(file);
+}
+
+function processFile(file) {
+    const extension = file.name.split('.').pop().toLowerCase();
+    if (extension === 'csv') {
+        processCSVFile(file);
+    } else if (['xlsx', 'xls'].includes(extension)) {
+        processExcelFile(file);
+    }
+}
+
+function processCSVFile(file) {
+    Papa.parse(file, {
+        header: true,
+        dynamicTyping: true,
+        complete: function(results) {
+            processData(results.data);
+        }
+    });
+}
+
+function processExcelFile(file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, {type: 'array'});
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+        processData(jsonData);
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+function processData(data) {
+    csvData = data;
+    headers = Object.keys(csvData[0]);
+    
+    populateSelects();
+    
+    const dateColumn = headers.find(header => 
+        csvData[0][header] instanceof Date || 
+        (typeof csvData[0][header] === 'string' && !isNaN(Date.parse(csvData[0][header]))));
+    
+    if (dateColumn) {
+        document.getElementById('xAxisSelect').value = dateColumn;
+    }
+    
+    updatePlot();
+}
+
+function populateSelects() {
+    const selects = ['xAxisSelect', 'yAxisSelect', 'y2AxisSelect'];
+    selects.forEach(selectId => {
+        const select = document.getElementById(selectId);
+        select.innerHTML = '';
+        headers.forEach(header => {
+            const option = document.createElement('option');
+            option.value = header;
+            option.text = header;
+            select.appendChild(option);
+        });
+    });
+
+    selects.forEach(selectId => {
+        document.getElementById(selectId).addEventListener('change', updatePlot);
+    });
+}
+
+function updatePlot() {
+    if (!csvData) return;
+    Plotly.newPlot('plotContainer', getCurrentTraces(), getCurrentLayout(), getCurrentConfig());
+}
+
+updatePlot();
+</script>
+</body></html>

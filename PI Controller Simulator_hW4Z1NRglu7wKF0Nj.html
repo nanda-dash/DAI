@@ -1,0 +1,164 @@
+<html><head><base href="https://tools.softinery.com/PIDSIM/">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Battery Charging PI Controller Simulator</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1, h2 { color: #2c3e50; }
+        .container { background-color: #f7f7f7; border-radius: 5px; padding: 20px; margin-top: 20px; }
+        label { display: inline-block; width: 200px; margin-bottom: 10px; }
+        input[type="number"] { width: 100px; padding: 5px; margin-bottom: 10px; }
+        button { background-color: #3498db; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background-color: #2980b9; }
+        #chart { width: 100%; height: 400px; margin-top: 20px; }
+        .equation { font-family: "Times New Roman", Times, serif; font-size: 1.2em; margin-top: 20px; text-align: center; }
+    </style>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+</head>
+<body>
+    <h1>Battery Charging PI Controller Simulator</h1>
+    
+    <div class="container">
+        <h2>Controller Parameters</h2>
+        <div>
+            <label for="kp">Proportional Gain (Kp):</label>
+            <input type="number" id="kp" value="0.5" step="0.1">
+        </div>
+        <div>
+            <label for="ki">Integral Gain (Ki):</label>
+            <input type="number" id="ki" value="0.1" step="0.01">
+        </div>
+        <div>
+            <label for="setpoint">Setpoint (Desired Voltage):</label>
+            <input type="number" id="setpoint" value="4.2" step="0.1">
+        </div>
+        <div>
+            <label for="initial_voltage">Initial Battery Voltage:</label>
+            <input type="number" id="initial_voltage" value="3.7" step="0.1">
+        </div>
+        <div>
+            <label for="simulation_time">Simulation Time (seconds):</label>
+            <input type="number" id="simulation_time" value="100" step="10">
+        </div>
+        <div>
+            <label for="battery_capacity">Battery Capacity (Ah):</label>
+            <input type="number" id="battery_capacity" value="2.0" step="0.1">
+        </div>
+        <button onclick="runSimulation()">Run Simulation</button>
+    </div>
+
+    <div id="chart"></div>
+
+    <div class="equation">
+        <h2>PI Controller Equation</h2>
+        \[I(t) = K_p e(t) + K_i \int_0^t e(\tau) d\tau\]
+        <p>Where:</p>
+        <ul>
+            <li>\(I(t)\) is the control output (charging current)</li>
+            <li>\(e(t)\) is the error (desired voltage - battery voltage)</li>
+            <li>\(K_p\) is the proportional gain</li>
+            <li>\(K_i\) is the integral gain</li>
+        </ul>
+    </div>
+
+    <script>
+        function runSimulation() {
+            const kp = parseFloat(document.getElementById('kp').value);
+            const ki = parseFloat(document.getElementById('ki').value);
+            const setpoint = parseFloat(document.getElementById('setpoint').value);
+            const initial_voltage = parseFloat(document.getElementById('initial_voltage').value);
+            const simulation_time = parseInt(document.getElementById('simulation_time').value);
+            const battery_capacity = parseFloat(document.getElementById('battery_capacity').value);
+
+            let time = [];
+            let desired_voltage = [];
+            let battery_voltage = [];
+            let charging_current = [];
+            let error_sum = 0;
+            let current_voltage = initial_voltage;
+            let soc = (initial_voltage - 3.0) / (4.2 - 3.0); // Estimate initial State of Charge
+
+            for (let t = 0; t <= simulation_time; t++) {
+                time.push(t);
+                desired_voltage.push(setpoint);
+
+                let error = setpoint - current_voltage;
+                error_sum += error;
+
+                let current = kp * error + ki * error_sum;
+                
+                // Apply some constraints to the charging current
+                current = Math.max(0, Math.min(current, 1)); // Limit current between 0 and 1A
+                
+                charging_current.push(current);
+
+                // Simple battery model
+                let voltage_increase = (current * 0.1) / battery_capacity; // Simplified voltage increase
+                current_voltage += voltage_increase;
+                current_voltage = Math.min(current_voltage, 4.2); // Limit voltage to 4.2V
+                
+                battery_voltage.push(current_voltage);
+
+                // Update State of Charge
+                soc += (current * 0.1) / battery_capacity;
+                soc = Math.min(soc, 1);
+
+                // Add some randomness to simulate real-world conditions
+                current_voltage += (Math.random() - 0.5) * 0.01;
+            }
+
+            const trace1 = {
+                x: time,
+                y: desired_voltage,
+                type: 'scatter',
+                mode: 'lines',
+                name: 'Desired Voltage',
+                line: {color: '#3498db'}
+            };
+
+            const trace2 = {
+                x: time,
+                y: battery_voltage,
+                type: 'scatter',
+                mode: 'lines',
+                name: 'Battery Voltage',
+                line: {color: '#e74c3c'}
+            };
+
+            const trace3 = {
+                x: time,
+                y: charging_current,
+                type: 'scatter',
+                mode: 'lines',
+                name: 'Charging Current',
+                yaxis: 'y2',
+                line: {color: '#2ecc71'}
+            };
+
+            const layout = {
+                title: 'Battery Charging Simulation',
+                xaxis: { title: 'Time (seconds)' },
+                yaxis: { title: 'Voltage (V)', range: [3, 4.5] },
+                yaxis2: {
+                    title: 'Current (A)',
+                    titlefont: {color: '#2ecc71'},
+                    tickfont: {color: '#2ecc71'},
+                    overlaying: 'y',
+                    side: 'right',
+                    range: [0, 1.5]
+                },
+                legend: { x: 0, y: 1 }
+            };
+
+            Plotly.newPlot('chart', [trace1, trace2, trace3], layout);
+        }
+
+        // Run simulation on page load to show initial plot
+        document.addEventListener('DOMContentLoaded', () => {
+            runSimulation();
+            MathJax.Hub.Queue(["Typeset", MathJax.Hub]);
+        });
+    </script>
+</body>
+</html>

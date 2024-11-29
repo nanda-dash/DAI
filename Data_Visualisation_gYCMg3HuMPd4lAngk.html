@@ -1,0 +1,891 @@
+<html><head><base href="https://websim.creationengine.ai/data-viz-pro-enhanced/">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DataViz Explorer Pro</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f0f0f0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    transition: background-color 0.3s, color 0.3s;
+  }
+  .top-container {
+    background-color: #2c3e50;
+    color: white;
+    padding: 5px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.3s;
+  }
+  h1 {
+    margin: 0;
+    font-size: 1.5em;
+  }
+  #fileInput {
+    display: none;
+  }
+  .file-upload-btn {
+    background-color: #3498db;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  .file-upload-btn:hover {
+    background-color: #2980b9;
+  }
+  .main-container {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 10px 20px;
+    overflow: hidden;
+  }
+  #chartContainer {
+    flex-grow: 1;
+    position: relative;
+    overflow-y: auto;
+    height: calc(100vh - 200px);
+  }
+  #drawingOverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+  .drawing {
+    position: absolute;
+    pointer-events: auto;
+  }
+  .chart-options {
+    margin-top: 10px;
+    margin-bottom: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+  select, input {
+    padding: 5px;
+    border-radius: 3px;
+    border: 1px solid #ccc;
+  }
+  .axis-selection {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  #errorMessage {
+    color: red;
+    margin-top: 10px;
+  }
+  .checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .slider-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .slider {
+    width: 50px;
+  }
+  #toggleSettings {
+    margin-right: auto;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  .right-buttons {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .background-text-container {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 10px;
+  }
+  #backgroundText {
+    flex-grow: 1;
+  }
+  #backgroundFontSize {
+    width: 50px;
+  }
+  .text-move-buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .text-move-horizontal {
+    display: flex;
+  }
+  #yAxis2 {
+    min-height: 80px;
+    max-height: 80px;
+    overflow-y: auto;
+  }
+  .axis-selection select[multiple] {
+    padding: 5px;
+    border-radius: 3px;
+    border: 1px solid #ccc;
+  }
+</style>
+</head>
+<body>
+  <div class="top-container">
+    <h1>DataViz Explorer Pro</h1>
+    <div class="right-buttons">
+      <button id="toggleTheme" class="file-upload-btn">Toggle Theme</button>
+      <button id="toggleSettings">Toggle Settings</button>
+      <input type="file" id="fileInput" accept=".txt,.csv,.xls,.xlsx">
+      <label for="fileInput" class="file-upload-btn">Upload Data File</label>
+      <button id="savePNG" class="file-upload-btn">Save as PNG</button>
+    </div>
+  </div>
+
+  <div class="main-container">
+    <div id="errorMessage"></div>
+    <div id="settingsContainer" class="chart-options">
+      <select id="chartType">
+        <option value="line">Line Chart</option>
+        <option value="bar">Bar Chart</option>
+        <option value="radar">Radar Chart</option>
+        <option value="doughnut">Doughnut Chart</option>
+        <option value="pie">Pie Chart</option>
+        <option value="polarArea">Polar Area Chart</option>
+        <option value="bubble">Bubble Chart</option>
+        <option value="scatter">Scatter Plot</option>
+      </select>
+      <div class="axis-selection">
+        <label for="xAxis">X-Axis:</label>
+        <select id="xAxis"></select>
+      </div>
+      <div class="axis-selection">
+        <label for="yAxis">Y-Axis:</label>
+        <select id="yAxis"></select>
+      </div>
+      <div class="axis-selection">
+        <label for="yAxis2">Y-Axis 2:</label>
+        <select id="yAxis2" multiple>
+          <option value="">None</option>
+        </select>
+        <input type="color" id="chartColor2" value="#ff6384">
+      </div>
+      <input type="color" id="chartColor" value="#3498db">
+      <div class="checkbox-group">
+        <input type="checkbox" id="flipX">
+        <label for="flipX">Flip X-Axis</label>
+      </div>
+      <div class="checkbox-group">
+        <input type="checkbox" id="showGrid" checked>
+        <label for="showGrid">Show Grid</label>
+      </div>
+      <select id="chartTemplate">
+        <option value="default">Default Template</option>
+        <option value="minimalist">Minimalist</option>
+        <option value="colorful">Colorful</option>
+        <option value="professional">Professional</option>
+        <option value="dark">Dark</option>
+      </select>
+      <div class="slider-container">
+        <label for="xAxisDensity">X-Axis Density:</label>
+        <input type="range" id="xAxisDensity" class="slider" min="1" max="20" value="10">
+      </div>
+      <div class="slider-container">
+        <label for="yAxisDensity">Y-Axis Density:</label>
+        <input type="range" id="yAxisDensity" class="slider" min="1" max="20" value="10">
+      </div>
+      <div class="background-text-container">
+        <input type="text" id="backgroundText" placeholder="Background Text">
+        <input type="number" id="backgroundFontSize" min="10" max="100" value="30">
+        <div class="text-move-buttons">
+          <button id="moveTextUp">↑</button>
+          <div class="text-move-horizontal">
+            <button id="moveTextLeft">←</button>
+            <button id="moveTextRight">→</button>
+          </div>
+          <button id="moveTextDown">↓</button>
+        </div>
+      </div>
+      <div class="draw-tool-container">
+        <input type="color" id="drawColor" value="#000000">
+        <div class="checkbox-group">
+          <input type="checkbox" id="showDrawings">
+          <label for="showDrawings">Show Markers</label>
+        </div>
+      </div>
+    </div>
+    <div id="chartContainer">
+      <div id="drawingOverlay"></div>
+      <canvas id="myChart"></canvas>
+    </div>
+  </div>
+
+  <script>
+    let myChart;
+    let chartData;
+    let moveInterval;
+    let isDarkMode = false;
+    const fileInput = document.getElementById('fileInput');
+    const chartType = document.getElementById('chartType');
+    const chartColor = document.getElementById('chartColor');
+    const chartColor2 = document.getElementById('chartColor2');
+    const xAxisSelect = document.getElementById('xAxis');
+    const yAxisSelect = document.getElementById('yAxis');
+    const yAxis2Select = document.getElementById('yAxis2');
+    const flipX = document.getElementById('flipX');
+    const showGrid = document.getElementById('showGrid');
+    const chartTemplate = document.getElementById('chartTemplate');
+    const xAxisDensity = document.getElementById('xAxisDensity');
+    const yAxisDensity = document.getElementById('yAxisDensity');
+    const ctx = document.getElementById('myChart').getContext('2d');
+    const errorMessage = document.getElementById('errorMessage');
+    const toggleSettings = document.getElementById('toggleSettings');
+    const settingsContainer = document.getElementById('settingsContainer');
+    const savePNG = document.getElementById('savePNG');
+    const backgroundText = document.getElementById('backgroundText');
+    const backgroundFontSize = document.getElementById('backgroundFontSize');
+    const moveTextUp = document.getElementById('moveTextUp');
+    const moveTextDown = document.getElementById('moveTextDown');
+    const moveTextLeft = document.getElementById('moveTextLeft');
+    const moveTextRight = document.getElementById('moveTextRight');
+    const showDrawings = document.getElementById('showDrawings');
+
+    let isDrawing = false;
+    let startX, startY;
+    let currentShape;
+    let textPosition = { x: 400, y: 100 };
+    let drawingHistory = [];
+    let currentHistoryIndex = -1;
+
+    backgroundText.value = "Sample Chart";
+
+    fileInput.addEventListener('change', handleFileUpload);
+    chartType.addEventListener('change', createChart);
+    chartColor.addEventListener('change', updateChart);
+    chartColor2.addEventListener('change', updateChart);
+    xAxisSelect.addEventListener('change', createChart);
+    yAxisSelect.addEventListener('change', createChart);
+    yAxis2Select.addEventListener('change', createChart);
+    flipX.addEventListener('change', createChart);
+    showGrid.addEventListener('change', updateChart);
+    chartTemplate.addEventListener('change', createChart);
+    xAxisDensity.addEventListener('input', updateChart);
+    yAxisDensity.addEventListener('input', updateChart);
+    toggleSettings.addEventListener('click', () => {
+      settingsContainer.style.display = settingsContainer.style.display === 'none' ? 'flex' : 'none';
+      updateChartSize();
+    });
+    savePNG.addEventListener('click', () => saveChart('png'));
+    backgroundText.addEventListener('input', updateChart);
+    backgroundFontSize.addEventListener('input', updateChart);
+
+    const chartContainer = document.getElementById('chartContainer');
+    chartContainer.addEventListener('mousedown', startDrawing);
+    chartContainer.addEventListener('mousemove', draw);
+    chartContainer.addEventListener('mouseup', stopDrawing);
+    chartContainer.addEventListener('mouseleave', stopDrawing);
+
+    function startDrawing(e) {
+      isDrawing = true;
+      const rect = chartContainer.getBoundingClientRect();
+      startX = e.clientX - rect.left;
+      startY = e.clientY - rect.top;
+      currentShape = document.createElement('div');
+      currentShape.classList.add('drawing');
+      currentShape.style.border = '2px solid ' + document.getElementById('drawColor').value;
+      drawingOverlay.appendChild(currentShape);
+    }
+
+    function draw(e) {
+      if (!isDrawing) return;
+      const rect = chartContainer.getBoundingClientRect();
+      const endX = e.clientX - rect.left;
+      const endY = e.clientY - rect.top;
+      
+      const left = Math.min(startX, endX);
+      const top = Math.min(startY, endY);
+      const width = Math.abs(endX - startX);
+      const height = Math.abs(endY - startY);
+      
+      currentShape.style.left = left + 'px';
+      currentShape.style.top = top + 'px';
+      currentShape.style.width = width + 'px';
+      currentShape.style.height = height + 'px';
+    }
+
+    function stopDrawing() {
+      if (isDrawing) {
+        isDrawing = false;
+        addDrawingToHistory(currentShape);
+      }
+    }
+
+    function addDrawingToHistory(drawing) {
+      drawingHistory = drawingHistory.slice(0, currentHistoryIndex + 1);
+      drawingHistory.push(drawing);
+      currentHistoryIndex++;
+    }
+
+    function undo() {
+      if (currentHistoryIndex >= 0) {
+        const drawing = drawingHistory[currentHistoryIndex];
+        drawing.style.display = 'none';
+        currentHistoryIndex--;
+      }
+    }
+
+    function redo() {
+      if (currentHistoryIndex < drawingHistory.length - 1) {
+        currentHistoryIndex++;
+        const drawing = drawingHistory[currentHistoryIndex];
+        drawing.style.display = 'block';
+      }
+    }
+
+    document.addEventListener('keydown', function(e) {
+      if (e.ctrlKey && e.key === 'z') {
+        e.preventDefault();
+        undo();
+      } else if (e.ctrlKey && e.key === 'y') {
+        e.preventDefault();
+        redo();
+      }
+    });
+
+    showDrawings.addEventListener('change', function() {
+      const display = this.checked ? 'block' : 'none';
+      drawingHistory.forEach(drawing => {
+        drawing.style.display = display;
+      });
+    });
+
+    function handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) {
+        displayError("No file selected.");
+        return;
+      }
+
+      const reader = new FileReader();
+
+      reader.onload = function(e) {
+        let data;
+        try {
+          if (file.name.endsWith('.csv') || file.name.endsWith('.txt')) {
+            data = Papa.parse(e.target.result, { header: true }).data;
+          } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+            const workbook = XLSX.read(e.target.result, { type: 'binary' });
+            const sheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[sheetName];
+            data = XLSX.utils.sheet_to_json(worksheet);
+          } else {
+            throw new Error("Unsupported file type.");
+          }
+
+          if (!data || data.length === 0) {
+            throw new Error("No data found in the file.");
+          }
+
+          processData(data);
+          errorMessage.textContent = "";
+        } catch (error) {
+          displayError("Error processing file: " + error.message);
+        }
+      };
+
+      reader.onerror = function() {
+        displayError("Error reading file.");
+      };
+
+      if (file.name.endsWith('.csv') || file.name.endsWith('.txt')) {
+        reader.readAsText(file);
+      } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+        reader.readAsBinaryString(file);
+      } else {
+        displayError("Unsupported file type.");
+      }
+    }
+
+    function displayError(message) {
+      errorMessage.textContent = message;
+      console.error(message);
+    }
+
+    function processData(data) {
+      chartData = data;
+      const columns = Object.keys(data[0]);
+      
+      xAxisSelect.innerHTML = '';
+      yAxisSelect.innerHTML = '';
+      yAxis2Select.innerHTML = '<option value="">None</option>';
+      
+      columns.forEach(column => {
+        xAxisSelect.add(new Option(column, column));
+        yAxisSelect.add(new Option(column, column));
+        yAxis2Select.add(new Option(column, column));
+      });
+
+      xAxisSelect.selectedIndex = 0;
+      yAxisSelect.selectedIndex = Math.min(1, columns.length - 1);
+
+      createChart();
+    }
+
+    function generateColors(count) {
+      const colors = [];
+      for (let i = 0; i < count; i++) {
+        colors.push(`hsl(${(i * 360) / count}, 70%, 50%)`);
+      }
+      return colors;
+    }
+
+    function getIsDarkMode() {
+      return isDarkMode;
+    }
+
+    function createChart() {
+      if (myChart) {
+        myChart.destroy();
+      }
+
+      const xAxis = xAxisSelect.value;
+      const yAxis = yAxisSelect.value;
+      const yAxis2Values = Array.from(yAxis2Select.selectedOptions).map(option => option.value);
+
+      let labels = [];
+      let datasets = [];
+
+      if (chartData && chartData.length > 0) {
+        labels = chartData.map(row => row[xAxis]);
+
+        const chartTypeVal = chartType.value;
+        const isMultiColorChart = ['pie', 'doughnut', 'polarArea'].includes(chartTypeVal);
+
+        if (!isMultiColorChart) {
+          // Primary Y-axis dataset
+          datasets.push({
+            label: yAxis,
+            data: chartData.map(row => parseFloat(row[yAxis])),
+            backgroundColor: chartColor.value,
+            borderColor: chartColor.value,
+            borderWidth: 1,
+            fill: false,
+            yAxisID: 'y'
+          });
+
+          // Secondary Y-axis datasets
+          yAxis2Values.forEach((axis, index) => {
+            if (axis) {
+              const hue = (360 / (yAxis2Values.length + 1)) * (index + 1);
+              const color = `hsl(${hue}, 70%, 50%)`;
+              datasets.push({
+                label: axis,
+                data: chartData.map(row => parseFloat(row[axis])),
+                backgroundColor: color,
+                borderColor: color,
+                borderWidth: 1,
+                fill: false,
+                yAxisID: 'y2'
+              });
+            }
+          });
+        } else {
+          // Handle pie/doughnut/polar charts (single dataset only)
+          datasets = [{
+            label: yAxis,
+            data: chartData.map(row => parseFloat(row[yAxis])),
+            backgroundColor: generateColors(chartData.length),
+            borderColor: 'white',
+            borderWidth: 2
+          }];
+        }
+
+        if (flipX.checked) {
+          labels.reverse();
+          datasets.forEach(dataset => dataset.data.reverse());
+        }
+      }
+
+      const xAxisTickCount = parseInt(xAxisDensity.value);
+      const yAxisTickCount = parseInt(yAxisDensity.value);
+
+      const templateOptions = getTemplateOptions();
+
+      // Update chart options to include dual axis
+      const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: xAxis || 'X Axis',
+              color: getIsDarkMode() ? '#ffffff' : '#000000'
+            },
+            ticks: {
+              maxRotation: 0,
+              autoSkip: true,
+              autoSkipPadding: 30,
+              maxTicksLimit: xAxisTickCount,
+              font: { weight: 'bold' },
+              color: getIsDarkMode() ? '#ffffff' : '#000000'
+            },
+            grid: {
+              display: showGrid.checked,
+              color: getIsDarkMode() ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+              lineWidth: 2
+            }
+          },
+          y: {
+            title: {
+              display: true,
+              text: yAxis || 'Primary Y Axis',
+              color: getIsDarkMode() ? '#ffffff' : '#000000'
+            },
+            position: 'left',
+            grid: {
+              display: showGrid.checked,
+              color: getIsDarkMode() ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+              lineWidth: 2
+            },
+            ticks: {
+              font: { weight: 'bold' },
+              color: getIsDarkMode() ? '#ffffff' : '#000000'
+            }
+          },
+          y2: {
+            title: {
+              display: yAxis2Values.length > 0,
+              text: 'Secondary Y Axis',
+              color: getIsDarkMode() ? '#ffffff' : '#000000'
+            },
+            position: 'right',
+            grid: {
+              display: false
+            },
+            ticks: {
+              font: { weight: 'bold' },
+              color: getIsDarkMode() ? '#ffffff' : '#000000'
+            },
+            display: yAxis2Values.length > 0
+          }
+        }
+      };
+
+      if (['pie', 'doughnut', 'polarArea'].includes(chartType.value)) {
+        delete chartOptions.scales;
+      }
+
+      myChart = new Chart(ctx, {
+        type: chartType.value,
+        data: {
+          labels: labels,
+          datasets: datasets
+        },
+        options: chartOptions
+      });
+    }
+
+    function updateChart() {
+      if (myChart) {
+        if (myChart.data && myChart.data.datasets && myChart.data.datasets[0]) {
+          const isMultiColorChart = ['pie', 'doughnut', 'polarArea'].includes(myChart.config.type);
+          if (!isMultiColorChart) {
+            myChart.data.datasets[0].backgroundColor = chartColor.value;
+            myChart.data.datasets[0].borderColor = chartColor.value;
+          }
+        }
+        if (myChart.options && myChart.options.scales) {
+          if (myChart.options.scales.x) {
+            myChart.options.scales.x.grid.display = showGrid.checked;
+            myChart.options.scales.x.ticks.maxTicksLimit = parseInt(xAxisDensity.value);
+          }
+          if (myChart.options.scales.y) {
+            myChart.options.scales.y.grid.display = showGrid.checked;
+            myChart.options.scales.y.ticks.maxTicksLimit = parseInt(yAxisDensity.value);
+          }
+        }
+        myChart.update();
+      } else {
+        createChart();
+      }
+    }
+
+    function saveChart(format) {
+      const canvas = document.getElementById('myChart');
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = canvas.width;
+      tempCanvas.height = canvas.height;
+      const tempCtx = tempCanvas.getContext('2d');
+      
+      tempCtx.drawImage(canvas, 0, 0);
+      
+      const drawings = drawingOverlay.getElementsByClassName('drawing');
+      for (let drawing of drawings) {
+        const rect = drawing.getBoundingClientRect();
+        const canvasRect = canvas.getBoundingClientRect();
+        tempCtx.strokeStyle = drawing.style.borderColor;
+        tempCtx.strokeRect(
+          rect.left - canvasRect.left,
+          rect.top - canvasRect.top,
+          rect.width,
+          rect.height
+        );
+      }
+      
+      const dataURL = tempCanvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = 'chart.png';
+      link.href = dataURL;
+      link.click();
+    }
+
+    function getTemplateOptions() {
+      const baseOptions = {
+        plugins: {
+          legend: { display: true },
+          title: { display: true }
+        }
+      };
+
+      switch (chartTemplate.value) {
+        case 'minimalist':
+          return {
+            ...baseOptions,
+            plugins: {
+              legend: { display: false },
+              title: { display: false }
+            },
+            scales: {
+              x: { grid: { display: false }, ticks: { display: true } },
+              y: { grid: { display: false }, ticks: { display: true } }
+            },
+            elements: {
+              line: { borderWidth: 1 },
+              point: { radius: 0 }
+            }
+          };
+        case 'colorful':
+          return {
+            ...baseOptions,
+            plugins: {
+              legend: { 
+                labels: { 
+                  font: { size: 14, family: 'Arial', weight: 'bold', color: 'rgb(50, 50, 50)' }
+                }
+              },
+              title: { 
+                font: { size: 20, family: 'Arial', weight: 'bold', color: 'rgb(50, 50, 50)' }
+              }
+            },
+            scales: {
+              x: { 
+                grid: { color: 'rgba(255, 0, 0, 0.2)', ticks: { color: 'rgb(50, 50, 50)', font: { weight: 'bold' } } }
+              },
+              y: { 
+                grid: { color: 'rgba(0, 0, 255, 0.2)', ticks: { color: 'rgb(50, 50, 50)', font: { weight: 'bold' } } }
+              }
+            },
+            elements: {
+              line: { borderWidth: 3, tension: 0.3 },
+              point: { 
+                radius: 6, 
+                hoverRadius: 9, 
+                backgroundColor: (context) => {
+                  const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'];
+                  return colors[context.dataIndex % colors.length];
+                },
+                borderColor: 'white',
+                borderWidth: 2,
+                hoverBorderWidth: 3
+              }
+            }
+          };
+        case 'professional':
+          return {
+            ...baseOptions,
+            plugins: {
+              legend: { labels: { usePointStyle: true, padding: 20, font: { family: 'Helvetica' } } },
+              title: { font: { size: 18, weight: 'bold', family: 'Helvetica' } }
+            },
+            scales: {
+              x: { grid: { color: 'rgba(0, 0, 0, 0.1)' }, ticks: { font: { family: 'Helvetica' } } },
+              y: { grid: { color: 'rgba(0, 0, 0, 0.1)' }, ticks: { font: { family: 'Helvetica' } } }
+            },
+            elements: {
+              line: { tension: 0.4, borderWidth: 2 },
+              point: { radius: 4, borderWidth: 2, hoverRadius: 6 }
+            }
+          };
+        case 'dark':
+          return {
+            ...baseOptions,
+            plugins: {
+              legend: { labels: { color: 'white' } },
+              title: { color: 'white', font: { size: 18, weight: 'bold' } }
+            },
+            scales: {
+              x: { grid: { color: 'rgba(255, 255, 255, 0.1)' }, ticks: { color: 'white' } },
+              y: { grid: { color: 'rgba(255, 255, 255, 0.1)' }, ticks: { color: 'white' } }
+            },
+            elements: {
+              line: { borderColor: 'white', borderWidth: 2 },
+              point: { backgroundColor: 'white', borderColor: 'black', borderWidth: 2 }
+            }
+          };
+        default:
+          return baseOptions;
+      }
+    }
+
+    function updateChartSize() {
+      const chartContainer = document.getElementById('chartContainer');
+      const settingsHeight = settingsContainer.style.display === 'none' ? 0 : settingsContainer.offsetHeight;
+      chartContainer.style.height = `calc(100vh - ${settingsHeight + 100}px)`; 
+    }
+
+    const sampleData = [
+      { date: '2023-01-01', value: 10 },
+      { date: '2023-02-01', value: 20 },
+      { date: '2023-03-01', value: 15 },
+      { date: '2023-04-01', value: 25 },
+      { date: '2023-05-01', value: 30 },
+    ];
+
+    function loadSampleData() {
+      chartData = sampleData;
+      const columns = Object.keys(sampleData[0]);
+
+      xAxisSelect.innerHTML = '';
+      yAxisSelect.innerHTML = '';
+      yAxis2Select.innerHTML = '<option value="">None</option>';
+      columns.forEach(column => {
+        xAxisSelect.add(new Option(column, column));
+        yAxisSelect.add(new Option(column, column));
+        yAxis2Select.add(new Option(column, column));
+      });
+
+      xAxisSelect.value = 'date';
+      yAxisSelect.value = 'value';
+
+      createChart();
+    }
+
+    window.addEventListener('load', loadSampleData);
+    window.addEventListener('resize', updateChartSize);
+    createChart();
+
+    moveTextUp.addEventListener('mousedown', () => moveText('up'));
+    moveTextDown.addEventListener('mousedown', () => moveText('down'));
+    moveTextLeft.addEventListener('mousedown', () => moveText('left'));
+    moveTextRight.addEventListener('mousedown', () => moveText('right'));
+
+    moveTextUp.addEventListener('mouseup', stopMoveText);
+    moveTextDown.addEventListener('mouseup', stopMoveText);
+    moveTextLeft.addEventListener('mouseup', stopMoveText);
+    moveTextRight.addEventListener('mouseup', stopMoveText);
+
+    moveTextUp.addEventListener('mouseleave', stopMoveText);
+    moveTextDown.addEventListener('mouseleave', stopMoveText);
+    moveTextLeft.addEventListener('mouseleave', stopMoveText);
+    moveTextRight.addEventListener('mouseleave', stopMoveText);
+
+    function moveText(direction) {
+      const step = 5;
+      moveInterval = setInterval(() => {
+        switch (direction) {
+          case 'up':
+            textPosition.y -= step;
+            break;
+          case 'down':
+            textPosition.y += step;
+            break;
+          case 'left':
+            textPosition.x -= step;
+            break;
+          case 'right':
+            textPosition.x += step;
+            break;
+        }
+        updateChart();
+      }, 50);
+    }
+
+    function stopMoveText() {
+      clearInterval(moveInterval);
+    }
+
+    const toggleTheme = document.getElementById('toggleTheme');
+
+    toggleTheme.addEventListener('click', () => {
+      isDarkMode = !isDarkMode;
+      applyTheme();
+    });
+
+    function applyTheme() {
+      const body = document.body;
+      const topContainer = document.querySelector('.top-container');
+      const buttons = document.querySelectorAll('.file-upload-btn');
+      const selects = document.querySelectorAll('select');
+      const inputs = document.querySelectorAll('input[type="text"], input[type="number"]');
+
+      if (isDarkMode) {
+        body.style.backgroundColor = '#1e1e1e';
+        body.style.color = '#ffffff';
+        topContainer.style.backgroundColor = '#333333';
+        buttons.forEach(btn => {
+          btn.style.backgroundColor = '#555555';
+          btn.style.color = '#ffffff';
+        });
+        selects.forEach(select => {
+          select.style.backgroundColor = '#333333';
+          select.style.color = '#ffffff';
+        });
+        inputs.forEach(input => {
+          input.style.backgroundColor = '#333333';
+          input.style.color = '#ffffff';
+        });
+      } else {
+        body.style.backgroundColor = '#f0f0f0';
+        body.style.color = '#000000';
+        topContainer.style.backgroundColor = '#2c3e50';
+        buttons.forEach(btn => {
+          btn.style.backgroundColor = '#3498db';
+          btn.style.color = '#ffffff';
+        });
+        selects.forEach(select => {
+          select.style.backgroundColor = '#ffffff';
+          select.style.color = '#000000';
+        });
+        inputs.forEach(input => {
+          input.style.backgroundColor = '#ffffff';
+          input.style.color = '#000000';
+        });
+      }
+
+      updateChart();
+    }
+
+    applyTheme();
+  </script>
+</body></html>

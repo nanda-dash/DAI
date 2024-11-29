@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Battery Charge Simulator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        .container {
+            display: flex;
+            flex-grow: 1;
+        }
+        .controls {
+            width: 300px;
+            padding-right: 20px;
+            overflow-y: auto;
+        }
+        .charts {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .chart-container {
+            flex-grow: 1;
+            position: relative;
+            margin-bottom: 20px;
+        }
+        .control {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="range"] {
+            width: 100%;
+        }
+        input[type="number"] {
+            width: 80px;
+            margin-left: 10px;
+        }
+        .input-group {
+            display: flex;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>Battery Charge Simulator</h1>
+    
+    <div class="container">
+        <div class="controls">
+            <div class="control">
+                <label for="simTime">Simulation Time (s):</label>
+                <div class="input-group">
+                    <input type="range" id="simTime" min="60" max="7200" step="60" value="3600">
+                    <input type="number" id="simTimeInput" value="3600" min="60" max="7200" step="60">
+                </div>
+            </div>
+            <div class="control">
+                <label for="batteryCapacity">Battery Capacity (mAh):</label>
+                <div class="input-group">
+                    <input type="range" id="batteryCapacity" min="500" max="5000" step="100" value="2000">
+                    <input type="number" id="batteryCapacityInput" value="2000" min="500" max="5000" step="100">
+                </div>
+            </div>
+            <div class="control">
+                <label for="initialVoltage">Initial Voltage (V):</label>
+                <div class="input-group">
+                    <input type="range" id="initialVoltage" min="3.0" max="4.2" step="0.1" value="3.7">
+                    <input type="number" id="initialVoltageInput" value="3.7" min="3.0" max="4.2" step="0.1">
+                </div>
+            </div>
+            <div class="control">
+                <label for="targetVoltage">Target Voltage (V):</label>
+                <div class="input-group">
+                    <input type="range" id="targetVoltage" min="3.7" max="4.5" step="0.1" value="4.2">
+                    <input type="number" id="targetVoltageInput" value="4.2" min="3.7" max="4.5" step="0.1">
+                </div>
+            </div>
+            <div class="control">
+                <label for="internalResistance">Internal Resistance (Ω):</label>
+                <div class="input-group">
+                    <input type="range" id="internalResistance" min="0.01" max="1" step="0.01" value="0.1">
+                    <input type="number" id="internalResistanceInput" value="0.1" min="0.01" max="1" step="0.01">
+                </div>
+            </div>
+            <div class="control">
+                <label for="kp">Kp:</label>
+                <div class="input-group">
+                    <input type="range" id="kp" min="0" max="2" step="0.01" value="0.5">
+                    <input type="number" id="kpInput" value="0.5" min="0" max="2" step="0.01">
+                </div>
+            </div>
+            <div class="control">
+                <label for="ki">Ki:</label>
+                <div class="input-group">
+                    <input type="range" id="ki" min="0" max="1" step="0.01" value="0.1">
+                    <input type="number" id="kiInput" value="0.1" min="0" max="1" step="0.01">
+                </div>
+            </div>
+            <div class="control">
+                <label for="sampleTime">Sample Time (s):</label>
+                <div class="input-group">
+                    <input type="range" id="sampleTime" min="0.1" max="10" step="0.1" value="1">
+                    <input type="number" id="sampleTimeInput" value="1" min="0.1" max="10" step="0.1">
+                </div>
+            </div>
+            <div class="control">
+                <label for="maxCurrent">Max Current (mA):</label>
+                <div class="input-group">
+                    <input type="range" id="maxCurrent" min="100" max="2000" step="100" value="1000">
+                    <input type="number" id="maxCurrentInput" value="1000" min="100" max="2000" step="100">
+                </div>
+            </div>
+        </div>
+        
+        <div class="charts">
+            <div class="chart-container">
+                <canvas id="voltageChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="currentChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simulation function
+        function runSimulation(params) {
+            const { simTime, sampleTime, batteryCapacity, initialVoltage, targetVoltage, internalResistance, kp, ki, maxCurrent } = params;
+            const time = Array.from({ length: Math.floor(simTime / sampleTime) + 1 }, (_, i) => i * sampleTime);
+            let voltage = [initialVoltage];
+            let current = [0];
+            let errorSum = 0;
+
+            for (let i = 1; i < time.length; i++) {
+                const error = targetVoltage - voltage[i - 1];
+                errorSum += error * sampleTime;
+                let output = kp * error + ki * errorSum;
+                current[i] = Math.min(Math.max(output, 0), maxCurrent);
+
+                const voltageIncrease = (current[i] * sampleTime) / (batteryCapacity * 3600) * (targetVoltage - initialVoltage);
+                const voltageDrop = current[i] * internalResistance;
+                voltage[i] = voltage[i - 1] + voltageIncrease - voltageDrop;
+            }
+
+            return { time, voltage, current };
+        }
+
+        // Chart initialization
+        const voltageCtx = document.getElementById('voltageChart').getContext('2d');
+        const currentCtx = document.getElementById('currentChart').getContext('2d');
+
+        const voltageChart = new Chart(voltageCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Voltage (V)',
+                    data: [],
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Time (minutes)'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Voltage (V)'
+                        }
+                    }
+                }
+            }
+        });
+
+        const currentChart = new Chart(currentCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Current (mA)',
+                    data: [],
+                    borderColor: 'rgb(255, 99, 132)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Time (minutes)'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Current (mA)'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Update simulation and charts
+        function updateSimulation() {
+            const params = {
+                simTime: parseFloat(document.getElementById('simTime').value),
+                sampleTime: parseFloat(document.getElementById('sampleTime').value),
+                batteryCapacity: parseFloat(document.getElementById('batteryCapacity').value),
+                initialVoltage: parseFloat(document.getElementById('initialVoltage').value),
+                targetVoltage: parseFloat(document.getElementById('targetVoltage').value),
+                internalResistance: parseFloat(document.getElementById('internalResistance').value),
+                kp: parseFloat(document.getElementById('kp').value),
+                ki: parseFloat(document.getElementById('ki').value),
+                maxCurrent: parseFloat(document.getElementById('maxCurrent').value)
+            };
+
+            const { time, voltage, current } = runSimulation(params);
+
+            voltageChart.data.labels = time.map(t => (t / 60).toFixed(2));
+            voltageChart.data.datasets[0].data = voltage;
+            voltageChart.update();
+
+            currentChart.data.labels = time.map(t => (t / 60).toFixed(2));
+            currentChart.data.datasets[0].data = current;
+            currentChart.update();
+        }
+
+        // Event listeners for sliders and inputs
+        document.querySelectorAll('input[type="range"]').forEach(input => {
+            input.addEventListener('input', (e) => {
+                document.getElementById(`${e.target.id}Input`).value = e.target.value;
+                updateSimulation();
+            });
+        });
+
+        document.querySelectorAll('input[type="number"]').forEach(input => {
+            input.addEventListener('input', (e) => {
+                document.getElementById(e.target.id.replace('Input', '')).value = e.target.value;
+                updateSimulation();
+            });
+        });
+
+        // Initial simulation
+        updateSimulation();
+    </script>
+</body>
+</html>
