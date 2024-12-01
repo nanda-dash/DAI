@@ -1,0 +1,490 @@
+<html><head><base href="file:///"><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CV Interactive</title>
+<style>
+  body, html {
+    margin: 0;
+    padding: 0;
+    font-family: 'Arial', sans-serif;
+    background-color: #f0f0f0;
+  }
+  .cv-container {
+    width: 210mm;
+    height: 297mm;
+    margin: 20px auto;
+    background-color: white;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    display: flex;
+    page-break-after: always;
+  }
+  .left-column {
+    width: 35%;
+    background-color: #003366;
+    color: white;
+    padding: 20px;
+  }
+  .right-column {
+    width: 65%;
+    padding: 20px;
+  }
+  .profile-pic {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    overflow: hidden;
+    margin: 0 auto 20px;
+    border: 3px solid white;
+    cursor: pointer;
+  }
+  .profile-pic img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  h1, h2 {
+    margin: 0;
+    text-align: center;
+  }
+  h1 {
+    font-size: 22px;
+    margin-bottom: 5px;
+  }
+  h2 {
+    font-size: 16px;
+    font-weight: normal;
+    margin-bottom: 20px;
+  }
+  .section-title {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: #003366;
+  }
+  .left-column .section-title {
+    color: white;
+    border-bottom: 1px solid white;
+    padding-bottom: 5px;
+  }
+  .contact-info {
+    margin-bottom: 5px;
+    font-size: 14px;
+  }
+  .contact-info i {
+    width: 20px;
+    text-align: center;
+    margin-right: 5px;
+  }
+  .skill-bar {
+    background-color: #ffffff;
+    height: 4px;
+    margin-bottom: 8px;
+    border-radius: 2px;
+    position: relative;
+  }
+  .skill-level {
+    background-color: #4a90e2;
+    height: 100%;
+    border-radius: 2px;
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+  ul {
+    padding-left: 20px;
+    margin: 0 0 15px 0;
+  }
+  li {
+    font-size: 14px;
+    margin-bottom: 5px;
+  }
+  .experience-item, .education-item {
+    margin-bottom: 12px;
+  }
+  .experience-title, .education-title {
+    font-weight: bold;
+    font-size: 15px;
+  }
+  .experience-company, .education-institution {
+    font-style: italic;
+    color: #666;
+    font-size: 14px;
+  }
+  #downloadPDF, #downloadWord {
+    position: fixed;
+    bottom: 20px;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    border: none;
+    color: white;
+  }
+  #downloadPDF {
+    right: 20px;
+    background-color: #003366;
+  }
+  #downloadWord {
+    right: 180px;
+    background-color: #2b579a;
+  }
+  [contenteditable] {
+    outline: none;
+  }
+  [contenteditable]:hover {
+    background-color: rgba(0,0,0,0.1);
+  }
+  .language-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .language-name {
+    flex: 1;
+  }
+  
+  /* Canadian style */
+  .canadian .cv-container {
+    flex-direction: column;
+  }
+  .canadian .left-column {
+    width: 100%;
+    background-color: #f0f0f0;
+    color: #333;
+  }
+  .canadian .right-column {
+    width: 100%;
+  }
+  .canadian .profile-pic {
+    display: none;
+  }
+  .canadian .section-title {
+    color: #003366;
+    border-bottom: 2px solid #003366;
+  }
+  .canadian .left-column .section-title {
+    color: #003366;
+    border-bottom: 2px solid #003366;
+  }
+  .canadian .contact-info {
+    color: #333;
+  }
+
+  .european .left-column {
+    background-color: #2c3e50;
+  }
+  .english .left-column {
+    background-color: #34495e;
+  }
+  .american .left-column {
+    background-color: #2980b9;
+  }
+
+  @media print {
+    body { margin: 0; padding: 0; }
+    .cv-container {
+      width: 210mm;
+      height: 297mm;
+      margin: 0;
+      box-shadow: none;
+    }
+    #downloadPDF, #downloadWord { display: none; }
+  }
+</style>
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-cookie/3.0.1/js.cookie.min.js"></script>
+</head>
+<body>
+  <select id="cvStyle" style="position: fixed; top: 20px; left: 20px; z-index: 1000;">
+    <option value="default">Estilo Predeterminado</option>
+    <option value="canadian">Estilo Canadiense</option>
+    <option value="european">Estilo Europeo</option>
+    <option value="english">Estilo Inglés</option>
+    <option value="american">Estilo Americano</option>
+  </select>
+
+  <select id="cvLanguage" style="position: fixed; top: 20px; left: 180px; z-index: 1000;">
+    <option value="es">Español</option>
+    <option value="en">English</option>
+    <option value="fr">Français</option>
+  </select>
+
+  <div class="cv-container" id="cv-content">
+    <div class="left-column">
+      <div class="profile-pic">
+        <img src="https://i.pravatar.cc/300" alt="Alejandro López" id="profile-image">
+      </div>
+      <h1 contenteditable="true">Alejandro LÓPEZ</h1>
+      <h2 contenteditable="true">DIRECTOR CREATIVO</h2>
+      
+      <div class="section">
+        <div class="section-title" contenteditable="true">CONTACTO</div>
+        <div class="contact-info">
+          <i class="fas fa-phone"></i>
+          <span contenteditable="true">+34 999 999 999</span>
+        </div>
+        <div class="contact-info">
+          <i class="fas fa-envelope"></i>
+          <span contenteditable="true">alejandro.lopez@email.com</span>
+        </div>
+        <div class="contact-info">
+          <i class="fas fa-map-marker-alt"></i>
+          <span contenteditable="true">Madrid, España</span>
+        </div>
+        <div class="contact-info">
+          <i class="fab fa-linkedin"></i>
+          <span contenteditable="true">linkedin.com/alejandro-lopez</span>
+        </div>
+      </div>
+      
+      <div class="section">
+        <div class="section-title" contenteditable="true">IDIOMAS</div>
+        <div class="language-item">
+          <span class="language-name" contenteditable="true">Español</span>
+          <div class="skill-bar">
+            <div class="skill-level" style="width: 100%" contenteditable="true" data-level="100"></div>
+          </div>
+        </div>
+        <div class="language-item">
+          <span class="language-name" contenteditable="true">Inglés</span>
+          <div class="skill-bar">
+            <div class="skill-level" style="width: 80%" contenteditable="true" data-level="80"></div>
+          </div>
+        </div>
+        <div class="language-item">
+          <span class="language-name" contenteditable="true">Francés</span>
+          <div class="skill-bar">
+            <div class="skill-level" style="width: 60%" contenteditable="true" data-level="60"></div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="section">
+        <div class="section-title" contenteditable="true">HABILIDADES</div>
+        <ul id="skills-list">
+          <li contenteditable="true">Comunicación</li>
+          <li contenteditable="true">Fotografía profesional</li>
+          <li contenteditable="true">Creatividad analítica</li>
+          <li contenteditable="true">Pensamiento crítico</li>
+          <li contenteditable="true">Experiencia intercultural</li>
+          <li contenteditable="true">Planificación organizada</li>
+          <li contenteditable="true">Autonomía en proyectos</li>
+        </ul>
+      </div>
+      
+      <div class="section">
+        <div class="section-title" contenteditable="true">SOFTWARES</div>
+        <ul id="software-list">
+          <li contenteditable="true">Pack Office</li>
+          <li contenteditable="true">Final Cut</li>
+          <li contenteditable="true">Photoshop</li>
+          <li contenteditable="true">Adobe Webmaster</li>
+          <li contenteditable="true">Prezi</li>
+        </ul>
+      </div>
+    </div>
+    
+    <div class="right-column">
+      <div class="section">
+        <div class="section-title" contenteditable="true">PERFIL</div>
+        <p id="profile" contenteditable="true">Licenciado en Publicidad con 8 años de experiencia en agencias de Marketing. Mi capacidad creativa y analítica me permite realizar campañas publicitarias altamente efectivas. Aspiro a crear piezas audiovisuales de calidad donde pueda demostrar todo mi potencial.</p>
+      </div>
+      
+      <div class="section">
+        <div class="section-title" contenteditable="true">EXPERIENCIA PROFESIONAL</div>
+        <div id="experience-list">
+          <div class="experience-item">
+            <div class="experience-title" contenteditable="true">Director Creativo</div>
+            <div class="experience-company" contenteditable="true">AGENCIA IMAGEN, Barcelona | 20XX - 20XX</div>
+            <ul>
+              <li contenteditable="true">Crear, liderar y administrar las estrategias creativas de marketing y publicidad para las diferentes campañas.</li>
+              <li contenteditable="true">Coordinar con el área de marketing para desarrollar planes de venta, promoción y distribución de servicios creativos.</li>
+              <li contenteditable="true">Supervisar la implementación de las campañas publicitarias en todos y cada uno de los canales digitales.</li>
+            </ul>
+          </div>
+          <div class="experience-item">
+            <div class="experience-title" contenteditable="true">Asistente de Marketing</div>
+            <div class="experience-company" contenteditable="true">JOHNSON & JOHNSON, Madrid | 20XX - 20XX</div>
+            <ul>
+              <li contenteditable="true">Participación activa en el desarrollo e implementación del Plan de Marketing.</li>
+              <li contenteditable="true">Colaboración en la creación de campañas publicitarias (televisión, radio, prensa, marketing directo, acciones promocionales, POP, PLV, ferias y presentaciones de producto).</li>
+            </ul>
+          </div>
+          <div class="experience-item">
+            <div class="experience-title" contenteditable="true">Asistente Creativo Junior</div>
+            <div class="experience-company" contenteditable="true">AGENCIA IMAGEN, Barcelona | 20XX - 20XX</div>
+            <ul>
+              <li contenteditable="true">Elaborar, ejecutar y gestionar un equipo de diseño visual creativo.</li>
+              <li contenteditable="true">Trabajar en colaboración con el gerente del equipo de diseño creativo para generar ideas creativas para varias cuentas.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      
+      <div class="section">
+        <div class="section-title" contenteditable="true">FORMACIÓN</div>
+        <div id="education-list">
+          <div class="education-item">
+            <div class="education-title" contenteditable="true">Máster en Marketing Digital Creativo</div>
+            <div class="education-institution" contenteditable="true">Universidad de Buenos Aires, Argentina | 20XX - 20XX</div>
+          </div>
+          <div class="education-item">
+            <div class="education-title" contenteditable="true">Licenciado en Comunicación y Publicidad</div>
+            <div class="education-institution" contenteditable="true">Universidad de Valencia, Valencia | 20XX - 20XX</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <button id="downloadPDF">Descargar PDF</button>
+  <button id="downloadWord">Descargar Word</button>
+
+  <script>
+  document.getElementById('downloadPDF').addEventListener('click', function() {
+    const element = document.getElementById('cv-content');
+    const currentStyle = document.getElementById('cvStyle').value;
+    element.className = 'cv-container ' + currentStyle;
+
+    const opt = {
+      margin: 0,
+      filename: 'CV_Alejandro_Lopez.pdf',
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, logging: true, dpi: 192, letterRendering: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    this.style.display = 'none';
+    document.getElementById('downloadWord').style.display = 'none';
+
+    html2pdf().set(opt).from(element).save().then(function() {
+      document.getElementById('downloadPDF').style.display = 'block';
+      document.getElementById('downloadWord').style.display = 'block';
+    });
+  });
+
+  document.getElementById('downloadWord').addEventListener('click', function() {
+    const element = document.getElementById('cv-content');
+    const currentStyle = document.getElementById('cvStyle').value;
+    element.className = 'cv-container ' + currentStyle;
+
+    this.style.display = 'none';
+    document.getElementById('downloadPDF').style.display = 'none';
+
+    mammoth.convertToHtml(element.outerHTML)
+      .then(function(result) {
+        var blob = new Blob([result.value], {type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+        var link = document.createElement('a');
+        link.href = window.URL.createObjectURL(blob);
+        link.download = 'CV_Alejandro_Lopez.docx';
+        link.click();
+
+        document.getElementById('downloadPDF').style.display = 'block';
+        document.getElementById('downloadWord').style.display = 'block';
+      });
+  });
+
+  document.querySelector('.profile-pic').addEventListener('click', function() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = function(event) {
+      const file = event.target.files[0];
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('profile-image').src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    };
+    input.click();
+  });
+
+  document.querySelectorAll('.skill-level').forEach(el => {
+    el.addEventListener('input', function() {
+      const newLevel = parseInt(this.textContent);
+      if (!isNaN(newLevel) && newLevel >= 0 && newLevel <= 100) {
+        this.style.width = newLevel + '%';
+        this.dataset.level = newLevel;
+      }
+    });
+
+    el.addEventListener('blur', function() {
+      this.textContent = '';
+    });
+  });
+
+  document.querySelectorAll('ul').forEach(ul => {
+    ul.addEventListener('dblclick', function(e) {
+      if (e.target.tagName === 'LI') {
+        if (confirm('¿Desea eliminar este elemento?')) {
+          e.target.remove();
+        }
+      } else if (e.target === this) {
+        const newItem = prompt('Ingrese nuevo elemento:');
+        if (newItem) {
+          const li = document.createElement('li');
+          li.textContent = newItem;
+          li.contentEditable = true;
+          this.appendChild(li);
+        }
+      }
+    });
+  });
+
+  document.querySelectorAll('[contenteditable]').forEach(el => {
+    el.tabIndex = 0;
+  });
+
+  function applyCVStyle(style) {
+    const cvContainer = document.getElementById('cv-content');
+    cvContainer.className = 'cv-container ' + style;
+  }
+
+  document.getElementById('cvLanguage').addEventListener('change', function() {
+    translateCV(this.value);
+  });
+
+  document.getElementById('cvStyle').addEventListener('change', function() {
+    applyCVStyle(this.value);
+    if (this.value === 'canadian') {
+      document.querySelector('.profile-pic').style.display = 'none';
+    } else {
+      document.querySelector('.profile-pic').style.display = 'block';
+    }
+  });
+
+  applyCVStyle('default');
+
+  async function translateCV(targetLang) {
+    const elements = document.querySelectorAll('[contenteditable]');
+    const apiUrl = 'https://libretranslate.de/translate';
+
+    for (const el of elements) {
+      const originalText = el.getAttribute('data-original-text') || el.textContent;
+      el.setAttribute('data-original-text', originalText);
+      
+      try {
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          body: JSON.stringify({
+            q: originalText,
+            source: 'es',
+            target: targetLang
+          }),
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          el.textContent = data.translatedText;
+        } else {
+          console.error('Translation error:', response.statusText);
+        }
+      } catch (error) {
+        console.error('Translation error:', error);
+      }
+    }
+  }
+  </script>
+</body></html>
