@@ -1,0 +1,552 @@
+<html><head><base href="blob:https://party.websim.ai/873bcf9a-3434-45d8-9709-4f853bbf5f31">
+<title>WebPage Creator - Interactive Element Editor</title>
+<style>
+  body, html {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    height: 100%;
+    overflow: hidden;
+  }
+  .app-container {
+    display: flex;
+    height: 100vh;
+  }
+  .toolbar {
+    width: 200px;
+    background-color: #f0f0f0;
+    padding: 10px;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+  }
+  .workspace {
+    flex-grow: 1;
+    background-color: #fff;
+    position: relative;
+    overflow: auto;
+    background-image: linear-gradient(to right, rgba(0,0,0,0.1) 1px, transparent 1px),
+                      linear-gradient(to bottom, rgba(0,0,0,0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+  .hide-grid {
+    background-image: none;
+  }
+  .config-panel {
+    width: 300px;
+    background-color: #f0f0f0;
+    padding: 10px;
+    box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+    overflow-y: auto;
+  }
+  .toolbar h3, .config-panel h3 {
+    margin-top: 0;
+  }
+  .element-btn {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 5px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+  }
+  .element-btn:hover {
+    background-color: #45a049;
+  }
+  .draggable {
+    position: absolute;
+    cursor: move;
+    user-select: none;
+    min-width: 50px;
+    min-height: 50px;
+    border: 1px dashed #ccc;
+  }
+  .config-panel label {
+    display: block;
+    margin-top: 10px;
+  }
+  .config-panel input, .config-panel select, .config-panel textarea {
+    width: 100%;
+    padding: 5px;
+    margin-top: 5px;
+  }
+  .config-panel textarea {
+    height: 100px;
+    resize: vertical;
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+  @keyframes slideLeft { from { transform: translateX(0); } to { transform: translateX(-100px); } }
+  @keyframes slideRight { from { transform: translateX(0); } to { transform: translateX(100px); } }
+  @keyframes slideUp { from { transform: translateY(0); } to { transform: translateY(-100px); } }
+  @keyframes slideDown { from { transform: translateY(0); } to { transform: translateY(100px); } }
+  @keyframes zoomIn { from { transform: scale(1); } to { transform: scale(1.5); } }
+  @keyframes zoomOut { from { transform: scale(1); } to { transform: scale(0.5); } }
+  @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-20px); }
+  }
+</style>
+</head>
+<body>
+<div class="app-container">
+  <div class="toolbar">
+    <h3>Elements</h3>
+    <button class="element-btn" data-type="text">Add Text</button>
+    <button class="element-btn" data-type="image">Add Image</button>
+    <button class="element-btn" data-type="video">Add Video</button>
+    <button class="element-btn" data-type="audio">Add Audio</button>
+    <button class="element-btn" data-type="rectangle">Add Rectangle</button>
+    <button class="element-btn" data-type="circle">Add Circle</button>
+    <button class="element-btn" data-type="triangle">Add Triangle</button>
+    <h3>Options</h3>
+    <button id="toggleGrid">Toggle Grid</button>
+    <h3>File</h3>
+    <button id="saveBtn">Save Page</button>
+    <button id="openBtn">Open Page</button>
+  </div>
+  
+  <div class="workspace" id="workspace">
+    <!-- Elements will be added here -->
+  </div>
+  
+  <div class="config-panel">
+    <h3>Element Configuration</h3>
+    <div id="elementConfig">
+      <!-- Configuration options will be dynamically added here -->
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/interact.js/1.10.11/interact.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const workspace = document.getElementById('workspace');
+  const configPanel = document.getElementById('elementConfig');
+  let selectedElement = null;
+
+  // Add element buttons
+  document.querySelectorAll('.element-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const type = this.dataset.type;
+      addElement(type);
+    });
+  });
+
+  function addElement(type) {
+    const element = document.createElement('div');
+    element.className = 'draggable';
+    element.dataset.type = type;
+    element.style.width = '200px';
+    element.style.height = '100px';
+    
+    switch(type) {
+      case 'text':
+        element.innerHTML = '<p>Sample Text</p>';
+        break;
+      case 'image':
+        element.innerHTML = '<img src="https://via.placeholder.com/150" alt="Sample Image" style="max-width:100%;height:auto;">';
+        break;
+      case 'video':
+        element.innerHTML = '<video src="https://www.w3schools.com/html/mov_bbb.mp4" controls style="max-width:100%;height:auto;"></video>';
+        break;
+      case 'audio':
+        element.innerHTML = '<audio src="https://www.w3schools.com/html/horse.ogg" controls></audio>';
+        break;
+      case 'rectangle':
+        element.style.backgroundColor = 'red';
+        break;
+      case 'circle':
+        element.style.backgroundColor = 'blue';
+        element.style.borderRadius = '50%';
+        break;
+      case 'triangle':
+        element.style.width = '0';
+        element.style.height = '0';
+        element.style.borderLeft = '50px solid transparent';
+        element.style.borderRight = '50px solid transparent';
+        element.style.borderBottom = '100px solid green';
+        break;
+    }
+
+    workspace.appendChild(element);
+    makeElementDraggable(element);
+    updateElementConfig(element);
+  }
+
+  function makeElementDraggable(element) {
+    interact(element)
+      .draggable({
+        inertia: true,
+        modifiers: [
+          interact.modifiers.restrictRect({
+            restriction: 'parent',
+            endOnly: true
+          })
+        ],
+        autoScroll: true,
+        listeners: {
+          move: dragMoveListener,
+          end(event) {
+            const target = event.target;
+            const x = parseFloat(target.getAttribute('data-x')) || 0;
+            const y = parseFloat(target.getAttribute('data-y')) || 0;
+            
+            target.style.transform = `translate(${x}px, ${y}px)`;
+            updateElementConfig(target);
+          }
+        }
+      })
+      .resizable({
+        edges: { left: true, right: true, bottom: true, top: true },
+        listeners: {
+          move (event) {
+            let { x, y } = event.target.dataset;
+            x = (parseFloat(x) || 0) + event.deltaRect.left;
+            y = (parseFloat(y) || 0) + event.deltaRect.top;
+            Object.assign(event.target.style, {
+              width: `${event.rect.width}px`,
+              height: `${event.rect.height}px`,
+              transform: `translate(${x}px, ${y}px)`
+            });
+            Object.assign(event.target.dataset, { x, y });
+          }
+        }
+      })
+      .on('tap', function (event) {
+        updateElementConfig(event.target);
+      });
+  }
+
+  function dragMoveListener(event) {
+    const target = event.target;
+    const x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
+    const y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
+
+    target.style.transform = `translate(${x}px, ${y}px)`;
+    target.setAttribute('data-x', x);
+    target.setAttribute('data-y', y);
+
+    // Update the position inputs in the config panel
+    const xPosInput = document.getElementById('x-pos');
+    const yPosInput = document.getElementById('y-pos');
+    if (xPosInput) xPosInput.value = Math.round(x);
+    if (yPosInput) yPosInput.value = Math.round(y);
+  }
+
+  function updateElementConfig(element) {
+    selectedElement = element;
+    configPanel.innerHTML = '';
+
+    // Position
+    addConfigInput('X Position', 'number', 'x-pos', element.getAttribute('data-x') || 0);
+    addConfigInput('Y Position', 'number', 'y-pos', element.getAttribute('data-y') || 0);
+
+    // Size
+    addConfigInput('Width', 'number', 'width', element.offsetWidth);
+    addConfigInput('Height', 'number', 'height', element.offsetHeight);
+
+    // Z-Index
+    addConfigInput('Z-Index', 'number', 'z-index', element.style.zIndex || 0, 0, 1000, 1);
+
+    // Opacity
+    addConfigInput('Opacity', 'range', 'opacity', element.style.opacity || 1, 0, 1, 0.1);
+
+    // Content editor
+    addContentEditor(element);
+
+    // Animation
+    addConfigSelect('Animation', 'animation', [
+      'none',
+      'fadeIn',
+      'fadeOut',
+      'slideLeft',
+      'slideRight',
+      'slideUp',
+      'slideDown',
+      'zoomIn',
+      'zoomOut',
+      'rotate',
+      'bounce'
+    ]);
+
+    // Animation duration
+    addConfigInput('Animation Duration (s)', 'number', 'animation-duration', 1, 0.1, 10, 0.1);
+
+    // Animation preview
+    const previewBtn = document.createElement('button');
+    previewBtn.textContent = 'Preview Animation';
+    previewBtn.addEventListener('click', () => {
+      const animationType = document.getElementById('animation').value;
+      const duration = document.getElementById('animation-duration').value;
+      applyAnimation(animationType, duration);
+    });
+    configPanel.appendChild(previewBtn);
+
+    // Text config options
+    if (element.dataset.type === 'text') {
+      addTextConfigOptions(element);
+    }
+
+    // Geometric shapes options
+    if (['rectangle', 'circle', 'triangle'].includes(element.dataset.type)) {
+      addConfigInput('Background Color', 'color', 'background-color', element.style.backgroundColor || '#000000');
+      addConfigInput('Border Width', 'number', 'border-width', parseInt(element.style.borderWidth) || 0, 0, 20, 1);
+      addConfigInput('Border Color', 'color', 'border-color', element.style.borderColor || '#000000');
+      
+      if (element.dataset.type === 'circle') {
+        addConfigInput('Radius', 'number', 'border-radius', parseInt(element.style.borderRadius) || 50, 0, 100, 1);
+      }
+      
+      if (element.dataset.type === 'triangle') {
+        addConfigInput('Triangle Size', 'number', 'triangle-size', parseInt(element.style.borderBottom) || 100, 20, 200, 1);
+      }
+    }
+  }
+
+  function addTextConfigOptions(element) {
+    addConfigInput('Font Size', 'number', 'font-size', parseInt(window.getComputedStyle(element).fontSize), 1, 100, 1);
+    addConfigInput('Font Weight', 'number', 'font-weight', window.getComputedStyle(element).fontWeight, 100, 900, 100);
+    addConfigInput('Text Color', 'color', 'color', window.getComputedStyle(element).color);
+    addConfigSelect('Font Family', 'font-family', [
+      'Arial',
+      'Helvetica',
+      'Times New Roman',
+      'Courier',
+      'Verdana',
+      'Georgia',
+      'Palatino',
+      'Garamond',
+      'Bookman',
+      'Comic Sans MS',
+      'Trebuchet MS',
+      'Arial Black',
+      'Impact'
+    ]);
+  }
+
+  function addContentEditor(element) {
+    const type = element.dataset.type;
+    const div = document.createElement('div');
+    div.innerHTML = `<label>Content</label>`;
+
+    switch(type) {
+      case 'text':
+        div.innerHTML += `<textarea id="content-editor">${element.innerHTML}</textarea>`;
+        break;
+      case 'image':
+        const img = element.querySelector('img');
+        div.innerHTML += `
+          <input type="text" id="content-editor" placeholder="Image URL" value="${img ? img.src : ''}">
+          <input type="text" id="alt-text" placeholder="Alt text" value="${img ? img.alt : ''}">
+        `;
+        break;
+      case 'video':
+      case 'audio':
+        const media = element.querySelector(type);
+        div.innerHTML += `<input type="text" id="content-editor" placeholder="Media URL" value="${media ? media.src : ''}">`;
+        break;
+      default:
+        div.innerHTML += `<input type="text" id="content-editor" placeholder="Content" value="">`;
+        break;
+    }
+
+    configPanel.appendChild(div);
+
+    const contentEditor = document.getElementById('content-editor');
+    if (contentEditor) {
+      contentEditor.addEventListener('change', function() {
+        updateElementContent(type, this.value);
+      });
+    }
+
+    if (type === 'image') {
+      const altText = document.getElementById('alt-text');
+      if (altText) {
+        altText.addEventListener('change', function() {
+          const img = element.querySelector('img');
+          if (img) {
+            img.alt = this.value;
+          }
+        });
+      }
+    }
+  }
+
+  function updateElementContent(type, value) {
+    if (!selectedElement) return;
+
+    switch(type) {
+      case 'text':
+        selectedElement.innerHTML = value;
+        break;
+      case 'image':
+        const img = selectedElement.querySelector('img');
+        if (img) {
+          img.src = value;
+        } else {
+          selectedElement.innerHTML = `<img src="${value}" alt="Image">`;
+        }
+        break;
+      case 'video':
+      case 'audio':
+        const media = selectedElement.querySelector(type);
+        if (media) {
+          media.src = value;
+        } else {
+          selectedElement.innerHTML = `<${type} src="${value}" controls></${type}>`;
+        }
+        break;
+    }
+  }
+
+  function applyAnimation(animationType, duration) {
+    if (!selectedElement) return;
+    
+    selectedElement.style.animation = 'none';
+    selectedElement.offsetHeight; // Trigger reflow
+    selectedElement.style.animation = `${animationType} ${duration}s`;
+  }
+
+  function addConfigInput(label, type, id, value, min, max, step) {
+    const div = document.createElement('div');
+    div.innerHTML = `
+      <label for="${id}">${label}</label>
+      <input type="${type}" id="${id}" value="${value}" ${min !== undefined ? `min="${min}"` : ''} ${max !== undefined ? `max="${max}"` : ''} ${step !== undefined ? `step="${step}"` : ''}>
+    `;
+    configPanel.appendChild(div);
+
+    const input = div.querySelector('input');
+    input.addEventListener('change', function() {
+      if (selectedElement) {
+        switch(id) {
+          case 'x-pos':
+          case 'y-pos':
+            const x = parseFloat(document.getElementById('x-pos').value) || 0;
+            const y = parseFloat(document.getElementById('y-pos').value) || 0;
+            selectedElement.style.transform = `translate(${x}px, ${y}px)`;
+            selectedElement.setAttribute('data-x', x);
+            selectedElement.setAttribute('data-y', y);
+            break;
+          case 'width':
+          case 'height':
+            selectedElement.style[id] = this.value + 'px';
+            break;
+          case 'z-index':
+          case 'opacity':
+            selectedElement.style[id] = this.value;
+            break;
+          case 'font-size':
+            selectedElement.style.fontSize = this.value + 'px';
+            break;
+          case 'font-weight':
+            selectedElement.style.fontWeight = this.value;
+            break;
+          case 'color':
+          case 'background-color':
+          case 'border-color':
+            selectedElement.style[id] = this.value;
+            break;
+          case 'border-width':
+            selectedElement.style.borderWidth = this.value + 'px';
+            break;
+          case 'border-radius':
+            selectedElement.style.borderRadius = this.value + '%';
+            break;
+          case 'triangle-size':
+            selectedElement.style.borderBottom = this.value + 'px solid ' + (selectedElement.style.borderBottomColor || 'green');
+            selectedElement.style.borderLeft = (this.value / 2) + 'px solid transparent';
+            selectedElement.style.borderRight = (this.value / 2) + 'px solid transparent';
+            break;
+        }
+      }
+    });
+  }
+
+  function addConfigSelect(label, id, options) {
+    const div = document.createElement('div');
+    div.innerHTML = `
+      <label for="${id}">${label}</label>
+      <select id="${id}">
+        ${options.map(option => `<option value="${option}">${option}</option>`).join('')}
+      </select>
+    `;
+    configPanel.appendChild(div);
+
+    const select = div.querySelector('select');
+    select.addEventListener('change', function() {
+      if (selectedElement) {
+        switch(id) {
+          case 'animation':
+            // The animation will be applied when the preview button is clicked
+            break;
+          case 'font-family':
+            selectedElement.style.fontFamily = this.value;
+            break;
+        }
+      }
+    });
+  }
+
+  // Add save functionality
+  const saveBtn = document.getElementById('saveBtn');
+  const openBtn = document.getElementById('openBtn');
+
+  saveBtn.addEventListener('click', function() {
+    const htmlContent = workspace.innerHTML;
+    const cssContent = Array.from(document.styleSheets)
+      .map(sheet => Array.from(sheet.cssRules).map(rule => rule.cssText).join('\n'))
+      .join('\n');
+
+    const fullHTML = `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>${cssContent}</style>
+</head>
+<body>
+  ${htmlContent}
+</body>
+</html>
+    `;
+
+    const blob = new Blob([fullHTML], {type: 'text/html'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'exported_page.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  openBtn.addEventListener('click', function() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.html';
+    input.onchange = function(event) {
+      const file = event.target.files[0];
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const content = e.target.result;
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(content, 'text/html');
+        workspace.innerHTML = doc.body.innerHTML;
+        // Re-apply draggable functionality to loaded elements
+        workspace.querySelectorAll('.draggable').forEach(makeElementDraggable);
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  });
+
+  const toggleGridBtn = document.getElementById('toggleGrid');
+  toggleGridBtn.addEventListener('click', function() {
+    workspace.classList.toggle('hide-grid');
+  });
+});
+</script>
+</body>
+</html>
