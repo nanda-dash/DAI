@@ -1,0 +1,316 @@
+<html><head><base href="." />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Professional Resume Builder</title>
+<style>
+:root {
+  --primary: #2c3e50;
+  --secondary: #34495e;
+  --accent: #3498db;
+  --light: #ecf0f1;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  margin: 0;
+  padding: 20px;
+  background: var(--light);
+  color: var(--primary);
+}
+
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.1);
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+input, textarea {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+.section {
+  margin-bottom: 30px;
+}
+
+button {
+  background: var(--accent);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.3s ease;
+}
+
+button:hover {
+  background: #2980b9;
+}
+
+.experience-entry, .education-entry {
+  border: 1px solid #ddd;
+  padding: 15px;
+  margin-bottom: 10px;
+  border-radius: 4px;
+}
+
+#resume-preview {
+  margin-top: 30px;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.preview-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.preview-section {
+  margin-bottom: 20px;
+}
+
+.preview-title {
+  color: var(--accent);
+  border-bottom: 2px solid var(--accent);
+  padding-bottom: 5px;
+  margin-bottom: 10px;
+}
+
+@media print {
+  .no-print {
+    display: none;
+  }
+  
+  body {
+    padding: 0;
+    background: white;
+  }
+  
+  .container {
+    box-shadow: none;
+    padding: 0;
+  }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Professional Resume Builder</h1>
+  
+  <div class="form-section no-print">
+    <div class="section">
+      <h2>Personal Information</h2>
+      <div class="form-group">
+        <label for="fullName">Full Name</label>
+        <input type="text" id="fullName" required>
+      </div>
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" required>
+      </div>
+      <div class="form-group">
+        <label for="phone">Phone</label>
+        <input type="tel" id="phone" required>
+      </div>
+      <div class="form-group">
+        <label for="address">Address</label>
+        <input type="text" id="address" required>
+      </div>
+      <div class="form-group">
+        <label for="summary">Professional Summary</label>
+        <textarea id="summary" rows="4"></textarea>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Experience</h2>
+      <div id="experience-list"></div>
+      <button onclick="addExperience()">Add Experience</button>
+    </div>
+
+    <div class="section">
+      <h2>Education</h2>
+      <div id="education-list"></div>
+      <button onclick="addEducation()">Add Education</button>
+    </div>
+
+    <div class="section">
+      <h2>Skills</h2>
+      <div class="form-group">
+        <label for="skills">Skills (comma-separated)</label>
+        <input type="text" id="skills">
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Interests</h2>
+      <div class="form-group">
+        <label for="interests">Interests (comma-separated)</label>
+        <input type="text" id="interests">
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Additional Information</h2>
+      <div class="form-group">
+        <label for="additional">Extra Information</label>
+        <textarea id="additional" rows="4"></textarea>
+      </div>
+    </div>
+
+    <button onclick="generateResume()">Generate Resume</button>
+  </div>
+
+  <div id="resume-preview"></div>
+</div>
+
+<script>
+function addExperience() {
+  const experienceList = document.getElementById('experience-list');
+  const experienceEntry = document.createElement('div');
+  experienceEntry.className = 'experience-entry';
+  experienceEntry.innerHTML = `
+    <div class="form-group">
+      <label>Company</label>
+      <input type="text" class="company">
+    </div>
+    <div class="form-group">
+      <label>Position</label>
+      <input type="text" class="position">
+    </div>
+    <div class="form-group">
+      <label>Duration</label>
+      <input type="text" class="duration">
+    </div>
+    <div class="form-group">
+      <label>Responsibilities</label>
+      <textarea class="responsibilities" rows="3"></textarea>
+    </div>
+    <button onclick="this.parentElement.remove()">Remove</button>
+  `;
+  experienceList.appendChild(experienceEntry);
+}
+
+function addEducation() {
+  const educationList = document.getElementById('education-list');
+  const educationEntry = document.createElement('div');
+  educationEntry.className = 'education-entry';
+  educationEntry.innerHTML = `
+    <div class="form-group">
+      <label>Institution</label>
+      <input type="text" class="institution">
+    </div>
+    <div class="form-group">
+      <label>Degree</label>
+      <input type="text" class="degree">
+    </div>
+    <div class="form-group">
+      <label>Graduation Year</label>
+      <input type="text" class="year">
+    </div>
+    <button onclick="this.parentElement.remove()">Remove</button>
+  `;
+  educationList.appendChild(educationEntry);
+}
+
+function generateResume() {
+  const preview = document.getElementById('resume-preview');
+  
+  // Collect personal information
+  const name = document.getElementById('fullName').value;
+  const email = document.getElementById('email').value;
+  const phone = document.getElementById('phone').value;
+  const address = document.getElementById('address').value;
+  const summary = document.getElementById('summary').value;
+  
+  // Collect experience entries
+  const experienceEntries = Array.from(document.getElementsByClassName('experience-entry')).map(entry => ({
+    company: entry.querySelector('.company').value,
+    position: entry.querySelector('.position').value,
+    duration: entry.querySelector('.duration').value,
+    responsibilities: entry.querySelector('.responsibilities').value
+  }));
+  
+  // Collect education entries
+  const educationEntries = Array.from(document.getElementsByClassName('education-entry')).map(entry => ({
+    institution: entry.querySelector('.institution').value,
+    degree: entry.querySelector('.degree').value,
+    year: entry.querySelector('.year').value
+  }));
+  
+  // Collect skills, interests and additional information
+  const skills = document.getElementById('skills').value.split(',').map(skill => skill.trim());
+  const interests = document.getElementById('interests').value.split(',').map(interest => interest.trim());
+  const additional = document.getElementById('additional').value;
+  
+  // Generate resume HTML
+  preview.innerHTML = `
+    <div class="preview-header">
+      <h1>${name}</h1>
+      <p>${email} | ${phone}</p>
+      <p>${address}</p>
+    </div>
+    
+    <div class="preview-section">
+      <h2 class="preview-title">Professional Summary</h2>
+      <p>${summary}</p>
+    </div>
+    
+    <div class="preview-section">
+      <h2 class="preview-title">Experience</h2>
+      ${experienceEntries.map(exp => `
+        <div class="preview-experience">
+          <h3>${exp.position} at ${exp.company}</h3>
+          <p>${exp.duration}</p>
+          <p>${exp.responsibilities}</p>
+        </div>
+      `).join('')}
+    </div>
+    
+    <div class="preview-section">
+      <h2 class="preview-title">Education</h2>
+      ${educationEntries.map(edu => `
+        <div class="preview-education">
+          <h3>${edu.degree}</h3>
+          <p>${edu.institution} - ${edu.year}</p>
+        </div>
+      `).join('')}
+    </div>
+    
+    <div class="preview-section">
+      <h2 class="preview-title">Skills</h2>
+      <p>${skills.join(', ')}</p>
+    </div>
+
+    <div class="preview-section">
+      <h2 class="preview-title">Interests</h2>
+      <p>${interests.join(', ')}</p>
+    </div>
+
+    <div class="preview-section">
+      <h2 class="preview-title">Additional Information</h2>
+      <p>${additional}</p>
+    </div>
+  `;
+}
+</script>
+</body>
+</html>
